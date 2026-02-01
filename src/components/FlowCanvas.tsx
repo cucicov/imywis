@@ -32,33 +32,6 @@ const FlowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const addNode = () => {
-    const data: CustomNodeData = {
-      label: 'New Node',
-      text: '',
-    };
-
-    const newNode = {
-      id: `${nodes.length + 1}`,
-      type: 'custom',
-      data,
-      position: { x: Math.random() * 400, y: Math.random() * 400 },
-    };
-    setNodes([...nodes, newNode]);
-  };
-
-  // const updateNodeLabel = (nodeId: string, newLabel: string) => {
-  //   setNodes(nodes.map(node =>
-  //       node.id === nodeId
-  //           ? { ...node, data: { ...node.data, label: newLabel } }
-  //           : node
-  //   ));
-  // };
-
-  // const removeNode = (nodeId: string) => {
-  //   setNodes(nodes.filter(node => node.id !== nodeId));
-  // };
-
   const onConnect = useCallback(
       (connection: Connection) => {
         setEdges((eds) => addEdge(connection, eds));
@@ -95,7 +68,6 @@ const FlowCanvas = () => {
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <AddNodeButton onClick={addNode} />
 
       <ReactFlow
         nodes={nodes}
@@ -106,6 +78,7 @@ const FlowCanvas = () => {
         nodeTypes={nodeTypes}
         fitView
       >
+        <AddNodeButton />
         <Background/>
       </ReactFlow>
     </div>

@@ -1,11 +1,27 @@
-interface AddNodeButtonProps {
-    onClick: () => void;
-}
+import {useReactFlow} from "@xyflow/react";
+import {type CustomNodeData } from './CustomNode';
 
-const AddNodeButton = ({ onClick }: AddNodeButtonProps) => {
+const AddNodeButton = () => {
+    const { setNodes, getNodes } = useReactFlow();
+
+    const addNode = () => {
+        const data: CustomNodeData = {
+            label: 'New Node',
+            text: '',
+        };
+
+        const newNode = {
+            id: `${getNodes().length + 1}`,
+            type: 'custom',
+            data,
+            position: { x: Math.random() * 400, y: Math.random() * 400 },
+        };
+        setNodes((nodes) => [...nodes, newNode]);
+    };
+
     return (
         <button
-            onClick={onClick}
+            onClick={addNode}
             style={{
                 position: 'absolute',
                 top: '10px',
