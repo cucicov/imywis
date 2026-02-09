@@ -1,18 +1,21 @@
 import {useReactFlow} from "@xyflow/react";
-import {type CustomNodeData } from './CustomNode';
+import {type PageNodeData } from './PageNode.tsx';
 
-const AddNodeButton = () => {
+const AddPageNodeButton = () => {
     const { setNodes, getNodes } = useReactFlow();
 
     const addNode = () => {
-        const data: CustomNodeData = {
-            label: 'New Node',
-            text: '',
+        const data: PageNodeData = {
+            label: 'Page',
+            name: '',
+            width: 100,
+            height: 100,
+            mousePointer: ''
         };
 
         const newNode = {
             id: `${getNodes().length + 1}`,
-            type: 'custom',
+            type: 'pageNode',
             data,
             position: { x: Math.random() * 400, y: Math.random() * 400 },
         };
@@ -36,9 +39,9 @@ const AddNodeButton = () => {
                 fontSize: '14px',
             }}
         >
-            Add Node
+            Add Page Node
         </button>
     );
 };
 
-export default AddNodeButton;
+export default AddPageNodeButton;

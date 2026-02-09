@@ -10,18 +10,18 @@ import {
 import { useCallback, useEffect } from 'react';
 
 import '@xyflow/react/dist/style.css';
-import CustomNode, {type CustomNodeData } from './CustomNode';
-import AddNodeButton from './AddNodeButton';
+import PageNode, {type PageNodeData } from './PageNode.tsx';
+import AddPageNodeButton from './AddPageNodeButton.tsx';
 
 const nodeTypes = {
-  custom: CustomNode,
+  pageNode: PageNode,
 };
 
 const initialNodes = [
   {
     id: '1',
-    type: 'custom',
-    data: { label: 'Custom Node', text: '' } as CustomNodeData,
+    type: 'pageNode',
+    data: { label: '' } as PageNodeData,
     position: { x: 250, y: 5 },
   }
 ];
@@ -39,6 +39,7 @@ const FlowCanvas = () => {
       [setEdges]
   );
 
+  // TODO: this is not needed for PageNode, to be implemented for nodes that transmit data.
   useEffect(() => {
     setNodes((currentNodes) => {
       return currentNodes.map((node) => {
@@ -50,13 +51,16 @@ const FlowCanvas = () => {
           const sourceNodeId = incomingEdges[0].source;
           const sourceNode = currentNodes.find((n) => n.id === sourceNodeId);
 
-          if (sourceNode && sourceNode.data.text) {
+          if (sourceNode) {
             // Update this node's label with the source node's text
             return {
               ...node,
               data: {
                 ...node.data,
-                label: sourceNode.data.text,
+                name: sourceNode.data.name,
+                width: sourceNode.data.width,
+                height: sourceNode.data.height,
+                mousePointer: sourceNode.data.mousePointer,
               },
             };
           }
@@ -78,7 +82,7 @@ const FlowCanvas = () => {
         nodeTypes={nodeTypes}
         fitView
       >
-        <AddNodeButton />
+        <AddPageNodeButton />
         <Background/>
       </ReactFlow>
     </div>
