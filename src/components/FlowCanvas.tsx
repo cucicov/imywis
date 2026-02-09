@@ -10,11 +10,14 @@ import {
 import { useCallback, useEffect } from 'react';
 
 import '@xyflow/react/dist/style.css';
-import PageNode, {type PageNodeData } from './PageNode.tsx';
-import AddPageNodeButton from './AddPageNodeButton.tsx';
+import PageNode, {type PageNodeData } from '../nodes/PageNode.tsx';
+import AddPageNodeButton from '../nodes/AddPageNodeButton.tsx';
+import AddImageNodeButton from "../nodes/AddImageNodeButton.tsx";
+import ImageNode from "../nodes/ImageNode.tsx";
 
 const nodeTypes = {
   pageNode: PageNode,
+  imageNode: ImageNode
 };
 
 const initialNodes = [
@@ -39,7 +42,7 @@ const FlowCanvas = () => {
       [setEdges]
   );
 
-  // TODO: this is not needed for PageNode, to be implemented for nodes that transmit data.
+  // TODO: this is not needed for ImageNode, to be implemented for nodes that transmit data.
   useEffect(() => {
     setNodes((currentNodes) => {
       return currentNodes.map((node) => {
@@ -83,6 +86,7 @@ const FlowCanvas = () => {
         fitView
       >
         <AddPageNodeButton />
+        <AddImageNodeButton />
         <Background/>
       </ReactFlow>
     </div>

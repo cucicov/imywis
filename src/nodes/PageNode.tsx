@@ -18,7 +18,6 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, 'pageNode'>>) => {
         const targetId = evt.target.id;
         setNodes((nds) =>
             nds.map((node) => {
-                console.log(node);
                 if (node.id === id ) {
                     switch (targetId) {
                         case 'field-name': return {
@@ -53,7 +52,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, 'pageNode'>>) => {
 
                 }
 
-                //TODO: this is not needed for PageNode, move to the nodes that transmit data.
+                //TODO: this is not needed for ImageNode, move to the nodes that transmit data.
 
                 // Update any nodes connected to this node
                 const edges = getEdges();
