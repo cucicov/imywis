@@ -10,10 +10,10 @@ import {
 import { useCallback, useEffect } from 'react';
 
 import '@xyflow/react/dist/style.css';
-import PageNode, {type PageNodeData } from '../nodes/PageNode.tsx';
-import AddPageNodeButton from '../nodes/AddPageNodeButton.tsx';
-import AddImageNodeButton from "../nodes/AddImageNodeButton.tsx";
-import ImageNode from "../nodes/ImageNode.tsx";
+import PageNode, {type PageNodeData } from './nodes/PageNode.tsx';
+import AddPageNodeButton from './nodes/AddPageNodeButton.tsx';
+import AddImageNodeButton from "./nodes/AddImageNodeButton.tsx";
+import ImageNode from "./nodes/ImageNode.tsx";
 
 const nodeTypes = {
   pageNode: PageNode,
