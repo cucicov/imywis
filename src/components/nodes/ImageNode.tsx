@@ -1,5 +1,6 @@
-import { Handle, Position, useReactFlow, type Node, type NodeProps  } from '@xyflow/react';
+import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, type ChangeEvent} from 'react';
+import {getOutgoingConnectedNodeIds, updateConnectedNodes, updateCurrentNode} from "../../utils/nodeUtils.ts";
 
 export type ImageNodeData = {
     label: string;
@@ -21,34 +22,14 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, 'imageNode'>>) =>
         const { id: targetId, value, type, checked } = evt.target;
         const newValue = type === 'checkbox' ? checked : value;
         const field = targetId.replace('field-', '');
+        const connectedNodeIds = getOutgoingConnectedNodeIds(id, getEdges());
 
         setNodes((nds) =>
             nds.map((node) => {
                 if (node.id === id) {
-                    return {
-                        ...node,
-                        data: {
-                            ...node.data,
-                            [field]: newValue, //TODO: move this logic also to pageNode.
-                        },
-                    };
+                    return updateCurrentNode(node, field, newValue);
                 }
-
-                // Update any nodes connected to this node
-                const edges = getEdges();
-                const outgoingEdges = edges.filter((edge) => edge.source === id);
-
-                if (outgoingEdges.some((edge) => edge.target === node.id)) {
-                    return {
-                        ...node,
-                        data: {
-                            ...node.data,
-                            label: newValue as string,
-                        },
-                    };
-                }
-
-                return node;
+                return updateConnectedNodes(node, newValue, connectedNodeIds);
             })
         );
     }, [id, setNodes, getEdges]);
@@ -209,14 +190,11 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, 'imageNode'>>) =>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
 
-
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
 
-
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-
 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>

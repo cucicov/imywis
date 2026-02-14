@@ -1,5 +1,6 @@
-import { Handle, Position, useReactFlow, type Node, type NodeProps  } from '@xyflow/react';
+import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, type ChangeEvent} from 'react';
+import {getOutgoingConnectedNodeIds, updateConnectedNodes, updateCurrentNode} from "../../utils/nodeUtils.ts";
 
 export type PageNodeData = {
     label: string;
@@ -9,69 +10,23 @@ export type PageNodeData = {
     mousePointer?: string;
 };
 
+
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, 'pageNode'>>) => {
     const { setNodes, getEdges } = useReactFlow();
     data = {...data, label: 'Page'};
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
-        const newText = evt.target.value;
-        const targetId = evt.target.id;
+        const { id: targetId, value, type, checked } = evt.target;
+        const newValue = type === 'checkbox' ? checked : value;
+        const field = targetId.replace('field-', '');
+        const connectedNodeIds = getOutgoingConnectedNodeIds(id, getEdges());
+
         setNodes((nds) =>
             nds.map((node) => {
-                if (node.id === id ) {
-                    switch (targetId) {
-                        case 'field-name': return {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                name: newText,
-                            },
-                        };
-                        case 'field-width':  return {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                width: newText,
-                            },
-                        };
-                        case 'field-height':  return {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                height: newText,
-                            },
-                        };
-                        case 'field-mouse':  return {
-                            ...node,
-                            data: {
-                                ...node.data,
-                                mousePointer: newText,
-                            },
-                        };
-                    }
-
+                if (node.id === id) {
+                    return updateCurrentNode(node, field, newValue);
                 }
-
-                //TODO: this is not needed for ImageNode, move to the nodes that transmit data.
-
-                // Update any nodes connected to this node
-                const edges = getEdges();
-
-                // all edges from the current node pointing to other nodes.
-                const outgoingEdges = edges.filter((edge) => edge.source === id);
-
-                // if at least one of those edges points to this node, update its label.
-                if (outgoingEdges.some((edge) => edge.target === node.id)) {
-                    return {
-                        ...node,
-                        data: {
-                            ...node.data,
-                            label: newText,
-                        },
-                    };
-                }
-
-                return node;
+                return updateConnectedNodes(node, newValue, connectedNodeIds);
             })
         );
     }, [id, setNodes, getEdges]);
