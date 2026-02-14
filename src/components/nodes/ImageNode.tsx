@@ -2,6 +2,7 @@ import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow
 import {useCallback, type ChangeEvent} from 'react';
 import {getOutgoingConnectedNodeIds, updateCurrentNode, syncNodeDataFromSource} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
+import { HandleTypes } from '../../types/handleTypes';
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
@@ -44,11 +45,12 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
             border: '1px solid white',
             fontSize: '12px',
         }}>
+            {/*------------------- inputs ------------------- */}
             <Handle
-                key={`input-0`}
+                key="input-0"
                 type="target"
                 position={Position.Top}
-                id={`input-0`}
+                id={HandleTypes.TURQUOISE_INPUT}
                 style={{
                     left: `25%`,
                     width: '10px',
@@ -57,10 +59,10 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                 }}
             />
             <Handle
-                key={`input-1`}
+                key="input-1"
                 type="target"
                 position={Position.Top}
-                id={`input-1`}
+                id={HandleTypes.SAGE_INPUT}
                 style={{
                     left: `50%`,
                     width: '10px',
@@ -69,10 +71,10 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                 }}
             />
             <Handle
-                key={`input-2`}
+                key="input-2"
                 type="target"
                 position={Position.Top}
-                id={`input-2`}
+                id={HandleTypes.ORANGE_INPUT}
                 style={{
                     left: `75%`,
                     width: '10px',
@@ -80,6 +82,28 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     backgroundColor: '#FBB38D'
                 }}
             />
+            {/*------------------- outputs ------------------- */}
+            <Handle type="source" position={Position.Bottom}
+                    key="output-0"
+                    id={HandleTypes.ORANGE_OUTPUT}
+                    style={{
+                        left: `33%`,
+                        width: '10px',
+                        height: '10px',
+                        backgroundColor: '#FBB38D'
+                    }}
+            />
+            <Handle type="source" position={Position.Bottom}
+                    key="output-1"
+                    id={HandleTypes.RED_OUTPUT}
+                    style={{
+                        left: `66%`,
+                        width: '10px',
+                        height: '10px',
+                        backgroundColor: '#D05774'
+                    }}
+            />
+
             <b>{data.label}</b>
             <div style={{display: 'flex'}}>
                 <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
@@ -190,38 +214,16 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                 </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-
             </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-
             </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-
             </div>
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-
-
             </div>
-            <Handle type="source" position={Position.Bottom}
-                key={`output-0`}
-                id={`output-0`}
-                style={{
-                    left: `33%`,
-                    width: '10px',
-                    height: '10px',
-                    backgroundColor: '#FBB38D'
-                }}
-            />
-            <Handle type="source" position={Position.Bottom}
-                key={`output-1`}
-                id={`output-1`}
-                style={{
-                    left: `66%`,
-                    width: '10px',
-                    height: '10px',
-                    backgroundColor: '#D05774'
-                }}
-            />
         </div>
     );
 };

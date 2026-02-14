@@ -58,6 +58,17 @@ const FlowCanvas = () => {
     });
   }, [edges, setNodes]);
 
+  // validate node connections based on node input type
+  const isValidConnection = useCallback((connection: Edge | Connection) => {
+    const sourceHandle = connection.sourceHandle;
+    const targetHandle = connection.targetHandle;
+    
+    const sourceType = sourceHandle?.split('-')[0];
+    const targetType = targetHandle?.split('-')[0];
+    
+    return sourceType === targetType;
+  }, []);
+
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
 
@@ -68,6 +79,7 @@ const FlowCanvas = () => {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        isValidConnection={isValidConnection}
         fitView
       >
         <AddPageNodeButton />

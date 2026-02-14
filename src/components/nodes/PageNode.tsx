@@ -2,6 +2,7 @@ import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow
 import {useCallback, type ChangeEvent} from 'react';
 import {getOutgoingConnectedNodeIds, updateCurrentNode, syncNodeDataFromSource} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type PageNodeData} from '../../types/nodeTypes';
+import { HandleTypes } from '../../types/handleTypes';
 
 
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
@@ -45,12 +46,12 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
             border: '1px solid white',
             fontSize: '12px',
         }}>
-            {/* Render n+1 target handles */}
+            {/*------------------- inputs ------------------- */}
             <Handle
-                key={`input-0`}
+                key="input-0"
                 type="target"
                 position={Position.Top}
-                id={`input-0`}
+                id={HandleTypes.RED_INPUT}
                 style={{
                     left: `50%`,
                     width: '10px',
@@ -58,6 +59,14 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                     backgroundColor: '#D05774'
                 }}
             />
+            {/*------------------- outputs ------------------- */}
+            <Handle
+                type="source"
+                id={HandleTypes.RED_OUTPUT}
+                position={Position.Bottom}
+                style={{ width: '10px', height: '10px', backgroundColor: '#D05774' }}
+            />
+
             <b>{data.label}</b>
             <div style={{display: 'flex'}}>
                 <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
@@ -103,21 +112,16 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
 
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
 
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
 
-
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
 
-
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-
-
-            </div>
-            <Handle type="source" position={Position.Bottom} style={{ width: '10px', height: '10px', backgroundColor: '#D05774' }} />
         </div>
     );
 };
