@@ -10,10 +10,12 @@ import {
 import { useCallback, useEffect } from 'react';
 
 import '@xyflow/react/dist/style.css';
-import PageNode, {type PageNodeData } from './nodes/PageNode.tsx';
+import PageNode from './nodes/PageNode.tsx';
 import AddPageNodeButton from './nodes/AddPageNodeButton.tsx';
 import AddImageNodeButton from "./nodes/AddImageNodeButton.tsx";
 import ImageNode from "./nodes/ImageNode.tsx";
+import type {PageNodeData} from "../types/nodeTypes.ts";
+import {syncNodeDataFromSource} from "../utils/nodeUtils.ts";
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -42,31 +44,14 @@ const FlowCanvas = () => {
       [setEdges]
   );
 
-  // TODO: this is not needed for ImageNode, to be implemented for nodes that transmit data.
+  // Update target nodes when connections change
   useEffect(() => {
     setNodes((currentNodes) => {
       return currentNodes.map((node) => {
-        // Find all edges where this node is the target
-        const incomingEdges = edges.filter((edge) => edge.target === node.id);
-
-        if (incomingEdges.length > 0) {
-          // Get the source node's text from the first incoming edge
-          const sourceNodeId = incomingEdges[0].source;
-          const sourceNode = currentNodes.find((n) => n.id === sourceNodeId);
-
-          if (sourceNode) {
-            // Update this node's label with the source node's text
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                name: sourceNode.data.name,
-                width: sourceNode.data.width,
-                height: sourceNode.data.height,
-                mousePointer: sourceNode.data.mousePointer,
-              },
-            };
-          }
+        const incomingEdge = edges.find((edge) => edge.target === node.id);
+        if (incomingEdge) {
+          const sourceNode = currentNodes.find((n) => n.id === incomingEdge.source);
+          return syncNodeDataFromSource(node, sourceNode) as typeof node;
         }
         return node;
       });

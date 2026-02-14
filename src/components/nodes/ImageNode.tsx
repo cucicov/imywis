@@ -1,20 +1,9 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, type ChangeEvent} from 'react';
-import {getOutgoingConnectedNodeIds, updateConnectedNodes, updateCurrentNode} from "../../utils/nodeUtils.ts";
+import {getOutgoingConnectedNodeIds, updateCurrentNode, syncNodeDataFromSource} from "../../utils/nodeUtils.ts";
+import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 
-export type ImageNodeData = {
-    label: string;
-    path?: string;
-    width?: number;
-    height?: number;
-    autoWidth?: boolean;
-    autoHeight?: boolean;
-    positionX?: number;
-    positionY?: number;
-    opacity?: number;
-};
-
-const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, 'imageNode'>>) => {
+const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     data = {...data, label: 'Image'};
 
@@ -24,14 +13,26 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, 'imageNode'>>) =>
         const field = targetId.replace('field-', '');
         const connectedNodeIds = getOutgoingConnectedNodeIds(id, getEdges());
 
-        setNodes((nds) =>
-            nds.map((node) => {
+        setNodes((nds) => {
+            // First update the current node
+            const updatedCurrentNode = nds.find(n => n.id === id);
+            if (!updatedCurrentNode) return nds;
+
+            const currentNodeWithNewValue = updateCurrentNode(updatedCurrentNode, field, newValue);
+
+            return nds.map((node) => {
                 if (node.id === id) {
-                    return updateCurrentNode(node, field, newValue);
+                    return currentNodeWithNewValue;
                 }
-                return updateConnectedNodes(node, newValue, connectedNodeIds);
-            })
-        );
+
+                // Update nodes connected via outgoing edges
+                if (connectedNodeIds.has(node.id)) {
+                    return syncNodeDataFromSource(node, currentNodeWithNewValue);
+                }
+
+                return node;
+            });
+        });
     }, [id, setNodes, getEdges]);
 
     return (

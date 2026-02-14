@@ -21,13 +21,41 @@ export const updateConnectedNodes = (
     connectedNodeIds: Set<string>
 ) => {
     if (connectedNodeIds.has(node.id)) {
+        console.log("Update node: " + node.id);
         return {
             ...node,
             data: {
                 ...node.data,
-                label: newValue as string,
+                name: newValue,
             },
         };
     }
     return node;
+};
+
+export const syncNodeDataFromSource = (
+    targetNode: Node,
+    sourceNode: Node | undefined,
+    fieldsToSync?: string[]
+): Node => {
+    if (!sourceNode) return targetNode;
+
+    if (fieldsToSync) {
+        const updatedData = { ...targetNode.data };
+        fieldsToSync.forEach(field => {
+            if (field in sourceNode.data) {
+                updatedData[field] = sourceNode.data[field];
+            }
+        });
+        return { ...targetNode, data: updatedData };
+    }
+
+    const { label, ...dataToSync } = sourceNode.data;
+    return {
+        ...targetNode,
+        data: {
+            ...targetNode.data,
+            ...dataToSync,
+        },
+    };
 };

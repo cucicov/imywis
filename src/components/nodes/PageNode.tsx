@@ -1,17 +1,10 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, type ChangeEvent} from 'react';
-import {getOutgoingConnectedNodeIds, updateConnectedNodes, updateCurrentNode} from "../../utils/nodeUtils.ts";
-
-export type PageNodeData = {
-    label: string;
-    name?: string;
-    width?: number;
-    height?: number;
-    mousePointer?: string;
-};
+import {getOutgoingConnectedNodeIds, updateCurrentNode, syncNodeDataFromSource} from "../../utils/nodeUtils.ts";
+import {NODE_TYPES, type PageNodeData} from '../../types/nodeTypes';
 
 
-const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, 'pageNode'>>) => {
+const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     data = {...data, label: 'Page'};
 
@@ -21,14 +14,26 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, 'pageNode'>>) => {
         const field = targetId.replace('field-', '');
         const connectedNodeIds = getOutgoingConnectedNodeIds(id, getEdges());
 
-        setNodes((nds) =>
-            nds.map((node) => {
+        setNodes((nds) => {
+            // First update the current node
+            const updatedCurrentNode = nds.find(n => n.id === id);
+            if (!updatedCurrentNode) return nds;
+
+            const currentNodeWithNewValue = updateCurrentNode(updatedCurrentNode, field, newValue);
+
+            return nds.map((node) => {
                 if (node.id === id) {
-                    return updateCurrentNode(node, field, newValue);
+                    return currentNodeWithNewValue;
                 }
-                return updateConnectedNodes(node, newValue, connectedNodeIds);
-            })
-        );
+
+                // Update nodes connected via outgoing edges
+                if (connectedNodeIds.has(node.id)) {
+                    return syncNodeDataFromSource(node, currentNodeWithNewValue);
+                }
+
+                return node;
+            });
+        });
     }, [id, setNodes, getEdges]);
 
     return (
