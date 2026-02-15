@@ -38,6 +38,7 @@ export const syncNodeDataFromSource = (
     sourceNode: Node | undefined,
     fieldsToSync?: string[]
 ): Node => {
+    console.log("Sync node: " + targetNode.id);
     if (!sourceNode) return targetNode;
 
     if (fieldsToSync) {

@@ -1,12 +1,12 @@
 import {useReactFlow} from "@xyflow/react";
-import {type ImageNodeData } from './ImageNode.tsx';
+import {type ImageNodeData, NODE_TYPES} from "../../types/nodeTypes.ts";
 
 const AddPageNodeButton = () => {
     const { setNodes, getNodes } = useReactFlow();
 
     const addNode = () => {
         const data: ImageNodeData = {
-            label: 'Image',
+            label: NODE_TYPES.IMAGE,
             path: '',
             width: 100,
             height: 100,

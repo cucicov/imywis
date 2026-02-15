@@ -26,9 +26,9 @@ const nodeTypes = {
 
 const initialNodes = [
   {
-    id: 'node-id-1',
+    id: '1',
     type: NODE_TYPES.PAGE,
-    data: {} as PageNodeData,
+    data: {label: NODE_TYPES.PAGE} as PageNodeData,
     position: { x: 250, y: 5 },
   }
 ];

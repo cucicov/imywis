@@ -1,12 +1,12 @@
 import {useReactFlow} from "@xyflow/react";
-import {type PageNodeData } from './PageNode.tsx';
+import {NODE_TYPES, type PageNodeData} from "../../types/nodeTypes.ts";
 
 const AddPageNodeButton = () => {
     const { setNodes, getNodes } = useReactFlow();
 
     const addNode = () => {
         const data: PageNodeData = {
-            label: 'Page',
+            label: NODE_TYPES.PAGE,
             name: '',
             width: 100,
             height: 100,

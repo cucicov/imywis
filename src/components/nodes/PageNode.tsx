@@ -7,7 +7,6 @@ import { HandleTypes } from '../../types/handleTypes';
 
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
-    data = {...data, label: 'Page'};
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -67,7 +66,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                 style={{ width: '10px', height: '10px', backgroundColor: '#D05774' }}
             />
 
-            <b>{data.label}</b>
+            <b>{data.label + "-" + id}</b>
             <div style={{display: 'flex'}}>
                 <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
                     <label style={{ fontSize: '10px', color: '#57212E', whiteSpace: 'nowrap' }}>name:</label>

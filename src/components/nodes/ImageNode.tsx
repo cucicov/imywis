@@ -6,7 +6,6 @@ import { HandleTypes } from '../../types/handleTypes';
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
-    data = {...data, label: 'Image'};
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -104,7 +103,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     }}
             />
 
-            <b>{data.label}</b>
+            <b>{data.label + "-" + id}</b>
             <div style={{display: 'flex'}}>
                 <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
                     <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>path:</label>
