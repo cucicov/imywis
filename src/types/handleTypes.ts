@@ -9,4 +9,13 @@ export const HandleTypes = {
     SAGE_OUTPUT: 'sage-output',
 } as const;
 
+// Define connection rules. Allow certain inputs to accept only one or multiple sources.
+export const CONNECTION_RULES: Record<string, { allowMultiple: boolean }> = {
+    'red': { allowMultiple: true },
+    'turquoise': { allowMultiple: true },
+    'orange': { allowMultiple: false },
+    'sage': { allowMultiple: false },
+    // ... other types
+};
+
 export type HandleType = typeof HandleTypes[keyof typeof HandleTypes];
