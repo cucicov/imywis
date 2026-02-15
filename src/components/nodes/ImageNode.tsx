@@ -1,39 +1,27 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
-import {useCallback, type ChangeEvent} from 'react';
-import {getOutgoingConnectedNodeIds, updateCurrentNode, syncNodeDataFromSource} from "../../utils/nodeUtils.ts";
+import {useCallback, useState, type ChangeEvent} from 'react';
+import {updateCurrentNode} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
-    const { setNodes, getEdges } = useReactFlow();
+    const { setNodes } = useReactFlow();
+    const [metadataExpanded, setMetadataExpanded] = useState(true);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
         const newValue = type === 'checkbox' ? checked : value;
         const field = targetId.replace('field-', '');
-        const connectedNodeIds = getOutgoingConnectedNodeIds(id, getEdges());
 
         setNodes((nds) => {
-            // First update the current node
-            const updatedCurrentNode = nds.find(n => n.id === id);
-            if (!updatedCurrentNode) return nds;
-
-            const currentNodeWithNewValue = updateCurrentNode(updatedCurrentNode, field, newValue);
-
             return nds.map((node) => {
                 if (node.id === id) {
-                    return currentNodeWithNewValue;
+                    return updateCurrentNode(node, field, newValue);
                 }
-
-                // Update nodes connected via outgoing edges
-                if (connectedNodeIds.has(node.id)) {
-                    return syncNodeDataFromSource(node, currentNodeWithNewValue);
-                }
-
                 return node;
             });
         });
-    }, [id, setNodes, getEdges]);
+    }, [id, setNodes]);
 
     return (
         <div style={{
@@ -212,17 +200,52 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     />
                 </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
-            </div>
+            
+            {data.metadata && data.metadata.sourceNodes.length > 0 && (
+                <div style={{ marginTop: '10px', padding: '5px', background: 'rgba(0,0,0,0.15)', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.3)' }}>
+                    <div 
+                        className="nodrag"
+                        onClick={() => setMetadataExpanded(!metadataExpanded)}
+                        style={{ 
+                            fontSize: '9px', 
+                            fontWeight: 'bold', 
+                            marginBottom: metadataExpanded ? '5px' : '0', 
+                            color: '#fff',
+                            cursor: 'pointer',
+                            userSelect: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px'
+                        }}
+                    >
+                        <span>{metadataExpanded ? '▼' : '▶'}</span>
+                        <span>📦 Metadata ({data.metadata.sourceNodes.length})</span>
+                    </div>
+                    {metadataExpanded && data.metadata.sourceNodes.map((source, idx) => (
+                        <div key={idx} style={{ fontSize: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '3px' }}>
+                            <div style={{ marginBottom: '2px' }}><b>Node:</b> {source.nodeType} ({source.nodeId})</div>
+                            <div style={{ marginBottom: '3px' }}><b>Handle:</b> {source.handleType}</div>
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
+                                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Data:</div>
+                                {Object.entries(source.data).map(([key, value]) => (
+                                    key === 'metadata' ? (
+                                        <div key={key} style={{ marginLeft: '5px', marginTop: '3px', padding: '3px', background: 'rgba(255,200,0,0.2)', borderRadius: '2px', border: '1px solid rgba(255,200,0,0.5)' }}>
+                                            <div style={{ fontWeight: 'bold', color: '#FFD700' }}>🔗 Nested Metadata:</div>
+                                            <pre style={{ margin: '2px 0 0 0', fontSize: '7px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                                {JSON.stringify(value, null, 2)}
+                                            </pre>
+                                        </div>
+                                    ) : (
+                                        <div key={key} style={{ marginLeft: '5px', lineHeight: '1.4' }}>
+                                            <b>{key}:</b> {JSON.stringify(value)}
+                                        </div>
+                                    )
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

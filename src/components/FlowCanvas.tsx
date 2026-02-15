@@ -15,7 +15,7 @@ import AddPageNodeButton from './nodes/AddPageNodeButton.tsx';
 import AddImageNodeButton from "./nodes/AddImageNodeButton.tsx";
 import ImageNode from "./nodes/ImageNode.tsx";
 import type {PageNodeData} from "../types/nodeTypes.ts";
-import {syncNodeDataFromSource} from "../utils/nodeUtils.ts";
+import {syncNodeDataFromSource, removeSourceNodeMetadata} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
 
@@ -50,14 +50,46 @@ const FlowCanvas = () => {
   // Update target nodes when connections change
   useEffect(() => {
     setNodes((currentNodes) => {
-      return currentNodes.map((node) => {
-        const incomingEdge = edges.find((edge) => edge.target === node.id);
-        if (incomingEdge) {
-          const sourceNode = currentNodes.find((n) => n.id === incomingEdge.source);
-          return syncNodeDataFromSource(node, sourceNode) as typeof node;
+      const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
+      
+      // Track all active connections per target node
+      const activeConnections = new Map<string, Set<string>>();
+      edges.forEach(edge => {
+        if (!activeConnections.has(edge.target)) {
+          activeConnections.set(edge.target, new Set());
         }
-        return node;
+        activeConnections.get(edge.target)!.add(`${edge.source}:${edge.sourceHandle}`);
       });
+      
+      // Update metadata for all nodes
+      currentNodes.forEach(node => {
+        let updatedNode = node;
+        
+        // Remove metadata for disconnected sources
+        if (node.data.metadata?.sourceNodes) {
+          node.data.metadata.sourceNodes.forEach((source: { nodeId: string; handleType: string }) => {
+            const connectionKey = `${source.nodeId}:${source.handleType}`;
+            const nodeActiveConnections = activeConnections.get(node.id);
+            
+            if (!nodeActiveConnections || !nodeActiveConnections.has(connectionKey)) {
+              updatedNode = removeSourceNodeMetadata(updatedNode, source.nodeId, source.handleType);
+            }
+          });
+        }
+        
+        // Add/update metadata for connected sources
+        const incomingEdges = edges.filter(edge => edge.target === node.id);
+        incomingEdges.forEach(edge => {
+          const sourceNode = currentNodes.find(n => n.id === edge.source);
+          if (sourceNode) {
+            updatedNode = syncNodeDataFromSource(updatedNode, sourceNode, edge.sourceHandle) as typeof node;
+          }
+        });
+        
+        nodeMap.set(node.id, updatedNode);
+      });
+      
+      return Array.from(nodeMap.values());
     });
   }, [edges, setNodes]);
 

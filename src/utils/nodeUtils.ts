@@ -1,9 +1,5 @@
-import { type Node, type Edge } from '@xyflow/react';
-
-export const getOutgoingConnectedNodeIds = (sourceNodeId: string, edges: Edge[]): Set<string> => {
-    const outgoingEdges = edges.filter((edge) => edge.source === sourceNodeId);
-    return new Set(outgoingEdges.map((edge) => edge.target));
-};
+import { type Node } from '@xyflow/react';
+import type { NodeMetadata } from '../types/nodeTypes';
 
 export const updateCurrentNode = (node: Node, field: string, newValue: unknown) => {
     return {
@@ -15,48 +11,73 @@ export const updateCurrentNode = (node: Node, field: string, newValue: unknown) 
     };
 };
 
-export const updateConnectedNodes = (
-    node: Node,
-    newValue: unknown,
-    connectedNodeIds: Set<string>
-) => {
-    if (connectedNodeIds.has(node.id)) {
-        console.log("Update node: " + node.id);
-        return {
-            ...node,
-            data: {
-                ...node.data,
-                name: newValue,
-            },
-        };
-    }
-    return node;
-};
-
 export const syncNodeDataFromSource = (
     targetNode: Node,
     sourceNode: Node | undefined,
-    fieldsToSync?: string[]
+    sourceHandle: string | null | undefined
 ): Node => {
+    if (!sourceNode || !sourceHandle) return targetNode;
     console.log("Sync node: " + targetNode.id);
-    if (!sourceNode) return targetNode;
 
-    if (fieldsToSync) {
-        const updatedData = { ...targetNode.data };
-        fieldsToSync.forEach(field => {
-            if (field in sourceNode.data) {
-                updatedData[field] = sourceNode.data[field];
-            }
-        });
-        return { ...targetNode, data: updatedData };
+    const metadata: NodeMetadata = (targetNode.data.metadata as NodeMetadata) || { sourceNodes: [] };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { label, metadata: sourceMetadata, ...sourceData } = sourceNode.data;
+
+    // Include source node's metadata in the data if it exists
+    const dataToStore = {
+        ...sourceData,
+        ...(sourceMetadata ? { metadata: sourceMetadata } : {})
+    };
+
+    // Check if this source already exists
+    const existingIndex = metadata.sourceNodes.findIndex(
+        s => s.nodeId === sourceNode.id && s.handleType === sourceHandle
+    );
+
+    const sourceNodeInfo = {
+        nodeId: sourceNode.id,
+        nodeType: sourceNode.type || 'unknown',
+        handleType: sourceHandle,
+        data: dataToStore,
+    };
+
+    if (existingIndex >= 0) {
+        // Update existing
+        metadata.sourceNodes[existingIndex] = sourceNodeInfo;
+    } else {
+        // Add new
+        metadata.sourceNodes.push(sourceNodeInfo);
     }
 
-    const { label, ...dataToSync } = sourceNode.data;
     return {
         ...targetNode,
         data: {
             ...targetNode.data,
-            ...dataToSync,
+            metadata,
+        },
+    };
+};
+
+export const removeSourceNodeMetadata = (
+    targetNode: Node,
+    sourceNodeId: string,
+    sourceHandle: string | null | undefined
+): Node => {
+    if (!targetNode.data.metadata) return targetNode;
+
+    const currentMetadata = targetNode.data.metadata as NodeMetadata;
+    const metadata: NodeMetadata = {
+        ...currentMetadata,
+        sourceNodes: currentMetadata.sourceNodes.filter(
+            s => !(s.nodeId === sourceNodeId && s.handleType === sourceHandle)
+        ),
+    };
+
+    return {
+        ...targetNode,
+        data: {
+            ...targetNode.data,
+            metadata,
         },
     };
 };

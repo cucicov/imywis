@@ -5,12 +5,22 @@ export const NODE_TYPES = {
 
 export type NodeType = typeof NODE_TYPES[keyof typeof NODE_TYPES];
 
+export type NodeMetadata = {
+    sourceNodes: Array<{
+        nodeId: string;
+        nodeType: string;
+        handleType: string;
+        data: Record<string, unknown>;
+    }>;
+};
+
 export type PageNodeData = {
     label: string;
     name?: string;
     width?: number;
     height?: number;
     mousePointer?: string;
+    metadata?: NodeMetadata;
 };
 
 export type ImageNodeData = {
@@ -23,4 +33,5 @@ export type ImageNodeData = {
     positionX?: number;
     positionY?: number;
     opacity?: number;
+    metadata?: NodeMetadata;
 };
