@@ -18,6 +18,7 @@ import type {PageNodeData} from "../types/nodeTypes.ts";
 import {syncNodeDataFromSource, removeSourceNodeMetadata} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
+import P5Background from './P5Background.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -63,20 +64,20 @@ const FlowCanvas = () => {
       
       // Update metadata for all nodes
       currentNodes.forEach(node => {
-        let updatedNode = node;
-        
+        let updatedNode = node as typeof node;
+
         // Remove metadata for disconnected sources
         if (node.data.metadata?.sourceNodes) {
           node.data.metadata.sourceNodes.forEach((source: { nodeId: string; handleType: string }) => {
             const connectionKey = `${source.nodeId}:${source.handleType}`;
             const nodeActiveConnections = activeConnections.get(node.id);
-            
+
             if (!nodeActiveConnections || !nodeActiveConnections.has(connectionKey)) {
-              updatedNode = removeSourceNodeMetadata(updatedNode, source.nodeId, source.handleType);
+              updatedNode = removeSourceNodeMetadata(updatedNode, source.nodeId, source.handleType) as typeof node;
             }
           });
         }
-        
+
         // Add/update metadata for connected sources
         const incomingEdges = edges.filter(edge => edge.target === node.id);
         incomingEdges.forEach(edge => {
@@ -85,7 +86,7 @@ const FlowCanvas = () => {
             updatedNode = syncNodeDataFromSource(updatedNode, sourceNode, edge.sourceHandle) as typeof node;
           }
         });
-        
+
         nodeMap.set(node.id, updatedNode);
       });
       
@@ -120,8 +121,8 @@ const FlowCanvas = () => {
   }, [edges]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh' }}>
-
+    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
+      <P5Background nodes={nodes} />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -131,6 +132,7 @@ const FlowCanvas = () => {
         nodeTypes={nodeTypes}
         isValidConnection={isValidConnection}
         fitView
+        style={{ position: 'relative', zIndex: 1 }}
       >
         <AddPageNodeButton />
         <AddImageNodeButton />
