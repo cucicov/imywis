@@ -1,27 +1,22 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, useState, type ChangeEvent} from 'react';
-import {updateCurrentNode} from "../../utils/nodeUtils.ts";
+import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
-    const { setNodes } = useReactFlow();
+    const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(true);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
         const newValue = type === 'checkbox' ? checked : value;
         const field = targetId.replace('field-', '');
+        console.log("update field!");
 
-        setNodes((nds) => {
-            return nds.map((node) => {
-                if (node.id === id) {
-                    return updateCurrentNode(node, field, newValue);
-                }
-                return node;
-            });
-        });
-    }, [id, setNodes]);
+        const edges = getEdges();
+        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
+    }, [getEdges, id, setNodes]);
 
     return (
         <div style={{

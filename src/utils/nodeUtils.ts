@@ -1,4 +1,4 @@
-import { type Node } from '@xyflow/react';
+import { type Edge, type Node } from '@xyflow/react';
 import type { NodeMetadata } from '../types/nodeTypes';
 
 export const updateCurrentNode = (node: Node, field: string, newValue: unknown) => {
@@ -9,6 +9,73 @@ export const updateCurrentNode = (node: Node, field: string, newValue: unknown) 
             [field]: newValue,
         },
     };
+};
+
+export const updateNodeAndPropagate = (
+    nodes: Node[],
+    edges: Edge[],
+    nodeId: string,
+    field: string,
+    newValue: unknown
+): Node[] => {
+    const nodeMap = new Map(nodes.map(node => [node.id, node]));
+    const currentNode = nodeMap.get(nodeId);
+
+    if (!currentNode) return nodes;
+
+    const updatedSourceNode = updateCurrentNode(currentNode, field, newValue);
+    nodeMap.set(nodeId, updatedSourceNode);
+
+    const edgesBySource = new Map<string, Edge[]>();
+    edges.forEach(edge => {
+        const existing = edgesBySource.get(edge.source);
+        if (existing) {
+            existing.push(edge);
+        } else {
+            edgesBySource.set(edge.source, [edge]);
+        }
+    });
+
+    const queue: string[] = [nodeId];
+    const processedEdges = new Set<string>();
+    const visitedNodes = new Set<string>();
+    const maxIterations = Math.max(1, nodes.length * Math.max(1, edges.length));
+    let iterations = 0;
+
+    while (queue.length > 0) {
+        iterations += 1;
+        if (iterations > maxIterations) break;
+
+        const sourceId = queue.shift();
+        if (!sourceId) continue;
+        if (visitedNodes.has(sourceId)) continue;
+        visitedNodes.add(sourceId);
+
+        const sourceNode = nodeMap.get(sourceId);
+        if (!sourceNode) continue;
+
+        const outgoing = edgesBySource.get(sourceId) || [];
+        outgoing.forEach(edge => {
+            const edgeKey = `${edge.id ?? ''}:${edge.source}:${edge.target}:${edge.sourceHandle ?? ''}`;
+            if (processedEdges.has(edgeKey)) return;
+            processedEdges.add(edgeKey);
+
+            const targetNode = nodeMap.get(edge.target);
+            if (!targetNode) return;
+
+            const updatedTargetNode = syncNodeDataFromSource(
+                targetNode,
+                sourceNode,
+                edge.sourceHandle
+            );
+            nodeMap.set(edge.target, updatedTargetNode);
+            if (!visitedNodes.has(edge.target)) {
+                queue.push(edge.target);
+            }
+        });
+    }
+
+    return Array.from(nodeMap.values());
 };
 
 export const syncNodeDataFromSource = (

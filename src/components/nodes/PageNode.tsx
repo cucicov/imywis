@@ -1,12 +1,12 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, useState, type ChangeEvent} from 'react';
-import {updateCurrentNode} from "../../utils/nodeUtils.ts";
+import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type PageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
 
 
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
-    const { setNodes } = useReactFlow();
+    const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(true);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
@@ -14,15 +14,9 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
         const newValue = type === 'checkbox' ? checked : value;
         const field = targetId.replace('field-', '');
 
-        setNodes((nds) => {
-            return nds.map((node) => {
-                if (node.id === id) {
-                    return updateCurrentNode(node, field, newValue);
-                }
-                return node;
-            });
-        });
-    }, [id, setNodes]);
+        const edges = getEdges();
+        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
+    }, [getEdges, id, setNodes]);
 
     return (
         <div style={{
