@@ -20,6 +20,7 @@ import {syncNodeDataFromSource, removeSourceNodeMetadata} from "../utils/nodeUti
 import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
 import P5Background from './P5Background.tsx';
+import ExportP5Project from './ExportP5Project.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -124,6 +125,7 @@ const FlowCanvas = () => {
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
       <P5Background nodes={nodes} />
+      <ExportP5Project nodes={nodes} />
       <ReactFlow
         nodes={nodes}
         edges={edges}
