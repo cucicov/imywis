@@ -1,5 +1,5 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
-import {useCallback, useState, type ChangeEvent} from 'react';
+import {useCallback, useEffect, useState, type ChangeEvent} from 'react';
 import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
@@ -7,6 +7,11 @@ import { HandleTypes } from '../../types/handleTypes';
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(true);
+    const [previewError, setPreviewError] = useState(false);
+
+    useEffect(() => {
+        setPreviewError(false);
+    }, [data.path]);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -85,6 +90,30 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     }}
             />
 
+            {data.path && !previewError && (
+                <div style={{
+                    marginBottom: '6px',
+                    padding: '3px',
+                    background: 'rgba(255,255,255,0.4)',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0,0,0,0.1)'
+                }}>
+                    <img
+                        src={data.path.startsWith('http')
+                            ? `https://corsproxy.io/?${encodeURIComponent(data.path)}`
+                            : data.path}
+                        alt={`${data.label ?? 'Image'} preview`}
+                        onError={() => setPreviewError(true)}
+                        style={{
+                            display: 'block',
+                            width: '80px',
+                            height: '60px',
+                            objectFit: 'cover',
+                            borderRadius: '4px'
+                        }}
+                    />
+                </div>
+            )}
             <b>{data.label + "-" + id}</b>
             <div style={{display: 'flex'}}>
                 <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
