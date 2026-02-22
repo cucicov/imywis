@@ -8,6 +8,7 @@ import { HandleTypes } from '../../types/handleTypes';
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(true);
+    const isFirstPage = id === '1';
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -61,9 +62,10 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                         id="field-name"
                         className="nodrag"
                         type="text"
-                        value={data.name ?? ''}
+                        value={isFirstPage ? 'index.html' : (data.name ?? '')}
                         onChange={onTextChange}
-                        style={{ fontSize: '11px', width: '100px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
+                        disabled={isFirstPage}
+                        style={{ fontSize: '11px', width: '100px', border: 0, background: '#fff', opacity: isFirstPage ? 0.6 : 0.7, color: 'black', cursor: isFirstPage ? 'not-allowed' : 'text'}}
                     />
                     <input
                         id="field-width"

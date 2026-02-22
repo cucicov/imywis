@@ -9,7 +9,9 @@ const ExportP5Project = ({ nodes }: ExportP5ProjectProps) => {
   const onExport = () => {
     const pageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
     const pageData = pageNode?.data as PageNodeData | undefined;
-    const pageName = pageData?.name?.trim() || pageData?.label || 'p5-project';
+    const pageName = pageNode?.id === '1'
+      ? 'index.html'
+      : (pageData?.name?.trim() || pageData?.label || 'p5-project');
 
     const imageNodes = pageData?.metadata?.sourceNodes.filter(
       source => source.nodeType === NODE_TYPES.IMAGE

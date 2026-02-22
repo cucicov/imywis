@@ -31,7 +31,7 @@ const initialNodes = [
   {
     id: '1',
     type: NODE_TYPES.PAGE,
-    data: {label: NODE_TYPES.PAGE} as PageNodeData,
+    data: {label: NODE_TYPES.PAGE, name: 'index.html'} as PageNodeData,
     position: { x: 250, y: 5 },
   }
 ];
