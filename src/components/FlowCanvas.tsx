@@ -14,6 +14,7 @@ import PageNode from './nodes/PageNode.tsx';
 import AddPageNodeButton from './nodes/AddPageNodeButton.tsx';
 import AddImageNodeButton from "./nodes/AddImageNodeButton.tsx";
 import ImageNode from "./nodes/ImageNode.tsx";
+import NodeStateTransfer from "./nodes/NodeStateTransfer.tsx";
 import type {PageNodeData} from "../types/nodeTypes.ts";
 import {syncNodeDataFromSource, removeSourceNodeMetadata} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
@@ -134,6 +135,7 @@ const FlowCanvas = () => {
         fitView
         style={{ position: 'relative', zIndex: 1 }}
       >
+        <NodeStateTransfer />
         <AddPageNodeButton />
         <AddImageNodeButton />
         <Background/>

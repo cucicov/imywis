@@ -18,7 +18,7 @@ const AddPageNodeButton = () => {
         };
 
         const newNode = {
-            id: `${getNodes().length + 1}`,
+            id: `${Math.max(...getNodes().map(item => Number(item.id))) + 1}`,
             type: 'imageNode',
             data,
             position: { x: Math.random() * 400, y: Math.random() * 400 },

@@ -12,7 +12,6 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
         const { id: targetId, value, type, checked } = evt.target;
         const newValue = type === 'checkbox' ? checked : value;
         const field = targetId.replace('field-', '');
-        console.log("update field!");
 
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
