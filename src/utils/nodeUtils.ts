@@ -75,6 +75,7 @@ export const updateNodeAndPropagate = (
         });
     }
 
+    console.log(Array.from(nodeMap.values()));
     return Array.from(nodeMap.values());
 };
 

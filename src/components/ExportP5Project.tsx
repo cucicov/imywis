@@ -22,8 +22,9 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
 
         const width = toNumberOrNull(pageData?.width);
         const height = toNumberOrNull(pageData?.height);
+        const mousePointer = (pageData?.mousePointer ?? (pageData as PageNodeData & {mouse?: string} | undefined)?.mouse)?.trim() || null;
 
-        const sketchJs = buildSketchJs(images, width, height);
+        const sketchJs = buildSketchJs(images, width, height, mousePointer);
         const indexHtml = buildIndexHtml(pageName);
 
         downloadTextFile('index.html', indexHtml);
@@ -67,7 +68,12 @@ const buildIndexHtml = (title: string) => `<!doctype html>
 </html>
 `;
 
-const buildSketchJs = (images: Partial<ImageNodeData>[], width: number | null, height: number | null) => {
+const buildSketchJs = (
+    images: Partial<ImageNodeData>[],
+    width: number | null,
+    height: number | null,
+    mousePointer: string | null
+) => {
     const assets = images
         .map((img, i) => ({
             id: i,
@@ -84,6 +90,7 @@ const buildSketchJs = (images: Partial<ImageNodeData>[], width: number | null, h
 
     return `const canvasWidth = ${width === null ? 'null' : Number(width)};
 const canvasHeight = ${height === null ? 'null' : Number(height)};
+const cursorImagePath = ${mousePointer ? JSON.stringify(withCorsProxy(mousePointer)) : 'null'};
 console.log('Canvas size:', { canvasWidth, canvasHeight });
 
 const assets = ${JSON.stringify(assets, null, 2)};
@@ -109,6 +116,11 @@ function windowResized() {
 
 function draw() {
   background(220);
+  
+  if (cursorImagePath) {
+    cursor(cursorImagePath);
+  }
+  
   images.forEach((img, idx) => {
     if (!img || img.width <= 0) return;
     const asset = assets[idx];

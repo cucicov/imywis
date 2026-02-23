@@ -84,7 +84,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                         style={{ fontSize: '11px', width: '50px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
                     />
                     <input
-                        id="field-mouse"
+                        id="field-mousePointer"
                         className="nodrag"
                         type="text"
                         value={data.mousePointer ?? ''}

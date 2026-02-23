@@ -15,7 +15,8 @@ type ImageMetadataWithImage = Partial<ImageNodeData> & {
 
 const P5Background = ({ nodes }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
-  const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
+  const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]); //TODO: refactor this, find a way to organize the objects passed from nodes.
+  const mousePointerRef = useRef<string | null>(null); //TODO: refactor as above.
 
   const getPageDimensions = () => {
     const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
@@ -28,6 +29,16 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     return null;
   };
 
+  const loadCursorImage = (p5Instance: p5, mousePointer: string | null) => {
+    if (!mousePointer) {
+      p5Instance.cursor('default');
+      return;
+    }
+
+    const imagePath = withCorsProxy(mousePointer);
+    p5Instance.cursor(imagePath);
+  };
+
   useEffect(() => {
     // Find first page node and extract all image metadata
     const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
@@ -36,6 +47,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
       const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
         source => source.nodeType === NODE_TYPES.IMAGE
       ) || [];
+      mousePointerRef.current = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
 
       const newImageMetadataList: ImageMetadataWithImage[] = [];
 
@@ -46,9 +58,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
           // Load image if path exists
           let loadedImage: p5.Image | null = null;
           if (newImageData.path && p5InstanceRef.current) {
-            const imagePath = newImageData.path.startsWith('http')
-              ? `https://corsproxy.io/?${encodeURIComponent(newImageData.path)}`
-              : newImageData.path;
+            const imagePath = withCorsProxy(newImageData.path);
             loadedImage = p5InstanceRef.current.loadImage(imagePath);
           }
 
@@ -62,6 +72,9 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
       imageMetadataListRef.current = newImageMetadataList;
     } else {
       imageMetadataListRef.current = [];
+      if (p5InstanceRef.current) {
+        p5InstanceRef.current.cursor('default');
+      }
     }
   }, [nodes]);
 
@@ -97,6 +110,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
       const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
         source => source.nodeType === NODE_TYPES.IMAGE
       ) || [];
+      // const mousePointer = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
 
       const loadedImages: ImageMetadataWithImage[] = [];
 
@@ -106,9 +120,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
 
           let loadedImage: p5.Image | null = null;
           if (imageData.path) {
-            const imagePath = imageData.path.startsWith('http')
-              ? `https://corsproxy.io/?${encodeURIComponent(imageData.path)}`
-              : imageData.path;
+            const imagePath = withCorsProxy(imageData.path);
             loadedImage = p5Instance.loadImage(imagePath);
           }
 
@@ -125,6 +137,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
 
   const draw = (p5Instance: p5) => {
     p5Instance.background(220);
+    loadCursorImage(p5Instance, mousePointerRef.current);
 
     if (imageMetadataListRef.current.length > 0) {
       // Draw all images from the list
@@ -178,5 +191,10 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     </div>
   );
 };
+
+const withCorsProxy = (path: string) =>
+  path.startsWith('http')
+    ? `https://corsproxy.io/?${encodeURIComponent(path)}`
+    : path;
 
 export default P5Background;
