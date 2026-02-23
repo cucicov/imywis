@@ -3,6 +3,7 @@ import type p5 from 'react-p5/node_modules/@types/p5';
 import type { Node } from '@xyflow/react';
 import { NODE_TYPES, type PageNodeData, type ImageNodeData } from '../types/nodeTypes';
 import { useEffect, useRef } from 'react';
+import {toNumberOrNull} from "../utils/numberUtils.ts";
 
 type P5BackgroundProps = {
   nodes: Node[];
@@ -15,6 +16,17 @@ type ImageMetadataWithImage = Partial<ImageNodeData> & {
 const P5Background = ({ nodes }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
+
+  const getPageDimensions = () => {
+    const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
+    const pageData = firstPageNode?.data as PageNodeData | undefined;
+    const width = toNumberOrNull(pageData?.width);
+    const height = toNumberOrNull(pageData?.height);
+    if (width !== null && height !== null) {
+      return { width, height };
+    }
+    return null;
+  };
 
   useEffect(() => {
     // Find first page node and extract all image metadata
@@ -53,8 +65,29 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     }
   }, [nodes]);
 
+  useEffect(() => {
+    if (!p5InstanceRef.current) return;
+    const dimensions = getPageDimensions();
+    if (dimensions) {
+      p5InstanceRef.current.resizeCanvas(dimensions.width, dimensions.height);
+    } else {
+      p5InstanceRef.current.resizeCanvas(
+        p5InstanceRef.current.windowWidth,
+        p5InstanceRef.current.windowHeight
+      );
+    }
+  }, [nodes]);
+
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
-    p5Instance.createCanvas(p5Instance.windowWidth, p5Instance.windowHeight).parent(canvasParentRef);
+    const dimensions = getPageDimensions();
+    const renderer = dimensions
+      ? p5Instance.createCanvas(dimensions.width, dimensions.height)
+      : p5Instance.createCanvas(p5Instance.windowWidth, p5Instance.windowHeight);
+    renderer.parent(canvasParentRef);
+    const canvasEl = (renderer as unknown as { elt?: Element }).elt;
+    if (canvasEl instanceof HTMLCanvasElement) {
+      canvasEl.id = 'p5-background-canvas';
+    }
     p5InstanceRef.current = p5Instance;
 
     // Find first page node and load all images
@@ -123,7 +156,12 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
   };
 
   const windowResized = (p5Instance: p5) => {
-    p5Instance.resizeCanvas(p5Instance.windowWidth, p5Instance.windowHeight);
+    const dimensions = getPageDimensions();
+    if (dimensions) {
+      p5Instance.resizeCanvas(dimensions.width, dimensions.height);
+    } else {
+      p5Instance.resizeCanvas(p5Instance.windowWidth, p5Instance.windowHeight);
+    }
   };
 
   return (
