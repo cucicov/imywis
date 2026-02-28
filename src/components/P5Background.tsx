@@ -159,12 +159,6 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
           p5Instance.pop();
         }
       });
-    } else {
-      // Draw default square if no images
-      const squareSize = 100;
-      p5Instance.fill(100, 150, 255);
-      p5Instance.rectMode(p5Instance.CENTER);
-      p5Instance.rect(p5Instance.width / 2, p5Instance.height / 2, squareSize, squareSize);
     }
   };
 
