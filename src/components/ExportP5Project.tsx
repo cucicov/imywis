@@ -1,12 +1,13 @@
 import type {Node} from '@xyflow/react';
 import {NODE_TYPES, type PageNodeData} from '../types/nodeTypes';
+import {APP_CONFIG} from '../config/appConfig';
 
 type ExportP5ProjectProps = {
     nodes: Node[];
 };
 
 const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
-    const onExport = () => {
+    const onExport = async () => {
         const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
 
         const pagesData = pageNodes.map(pageNode => {
@@ -20,8 +21,17 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
             };
         });
 
-        const jsonData = JSON.stringify(pagesData, null, 2);
-        downloadTextFile('pages-export.json', jsonData);
+        const response = await fetch(APP_CONFIG.nodesApiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(pagesData),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to publish nodes (status ${response.status}).`);
+        }
     };
 
     return (
@@ -45,16 +55,6 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
             Publish
         </button>
     );
-};
-
-const downloadTextFile = (filename: string, content: string) => {
-    const blob = new Blob([content], {type: 'text/plain;charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    URL.revokeObjectURL(url);
 };
 
 export default ExportP5Project;
