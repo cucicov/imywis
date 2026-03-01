@@ -8,7 +8,7 @@ export type NodeType = typeof NODE_TYPES[keyof typeof NODE_TYPES];
 export type NodeMetadata = {
     sourceNodes: Array<{
         nodeId: string;
-        nodeType: string;
+        type: string;
         handleType: string;
         data: Record<string, unknown>;
     }>;

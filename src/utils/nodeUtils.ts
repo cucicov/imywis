@@ -104,7 +104,7 @@ export const syncNodeDataFromSource = (
 
     const sourceNodeInfo = {
         nodeId: sourceNode.id,
-        nodeType: sourceNode.type || 'unknown',
+        type: sourceNode.type || 'unknown',
         handleType: sourceHandle,
         data: dataToStore,
     };

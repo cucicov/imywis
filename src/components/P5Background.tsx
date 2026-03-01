@@ -45,7 +45,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     if (firstPageNode && p5InstanceRef.current) {
       const pageData = firstPageNode.data as PageNodeData;
       const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
-        source => source.nodeType === NODE_TYPES.IMAGE
+        source => source.type === NODE_TYPES.IMAGE
       ) || [];
       mousePointerRef.current = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
 
@@ -108,7 +108,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     if (firstPageNode) {
       const pageData = firstPageNode.data as PageNodeData;
       const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
-        source => source.nodeType === NODE_TYPES.IMAGE
+        source => source.type === NODE_TYPES.IMAGE
       ) || [];
       // const mousePointer = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
 
