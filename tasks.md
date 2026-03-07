@@ -1,6 +1,6 @@
 ### Tasks and potential problems
 - Nodes are updated in cascade also when a connection is not directly or indirectly affected. A non-related node triggers the updates of all other nodes. To investigate if it could become a potential performance problem with multiple nodes. Point of interest: **nodeUtils.syncNodeDataFromSource**
-
+- for corsproxy requests look into caching data in order to avoid multiple requests.
 
 
 

@@ -246,7 +246,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     </div>
                     {metadataExpanded && data.metadata.sourceNodes.map((source, idx) => (
                         <div key={idx} style={{ fontSize: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '3px' }}>
-                            <div style={{ marginBottom: '2px' }}><b>Node:</b> {source.nodeType} ({source.nodeId})</div>
+                            <div style={{ marginBottom: '2px' }}><b>Node:</b> {source.type} ({source.nodeId})</div>
                             <div style={{ marginBottom: '3px' }}><b>Handle:</b> {source.handleType}</div>
                             <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
                                 <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Data:</div>

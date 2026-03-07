@@ -21,6 +21,8 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
             };
         });
 
+        console.log('Publishing pages:', JSON.stringify(pagesData));
+
         const response = await fetch(APP_CONFIG.nodesApiUrl, {
             method: 'POST',
             headers: {
