@@ -188,7 +188,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
 
 const withCorsProxy = (path: string) =>
   path.startsWith('http')
-    ? `https://corsproxy.io/?${encodeURIComponent(path)}`
+    ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(path)}`
     : path;
 
 export default P5Background;

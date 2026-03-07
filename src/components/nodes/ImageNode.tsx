@@ -100,7 +100,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                 }}>
                     <img
                         src={data.path.startsWith('http')
-                            ? `https://corsproxy.io/?${encodeURIComponent(data.path)}`
+                            ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(data.path)}`
                             : data.path}
                         alt={`${data.label ?? 'Image'} preview`}
                         onError={() => setPreviewError(true)}
