@@ -41,7 +41,8 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     left: `25%`,
                     width: '10px',
                     height: '10px',
-                    backgroundColor: '#6BC8CD'
+                    backgroundColor: '#6BC8CD',
+                    border: '1px solid black',
                 }}
             />
             <Handle
@@ -53,7 +54,8 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     left: `50%`,
                     width: '10px',
                     height: '10px',
-                    backgroundColor: '#CDD8C7'
+                    backgroundColor: '#CDD8C7',
+                    border: '1px solid black',
                 }}
             />
             <Handle

@@ -18,6 +18,8 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]); //TODO: refactor this, find a way to organize the objects passed from nodes.
   const mousePointerRef = useRef<string | null>(null); //TODO: refactor as above.
 
+  // ---- Helper functions
+
   const getPageDimensions = () => {
     const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
     const pageData = firstPageNode?.data as PageNodeData | undefined;
@@ -39,6 +41,8 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     p5Instance.cursor(imagePath);
   };
 
+
+  // ---- LOAD IMAGES
   useEffect(() => {
     // Find first page node and extract all image metadata
     const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
@@ -78,6 +82,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     }
   }, [nodes]);
 
+  // ---- SET PAGE DIMENSIONS
   useEffect(() => {
     if (!p5InstanceRef.current) return;
     const dimensions = getPageDimensions();
@@ -91,6 +96,9 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     }
   }, [nodes]);
 
+
+  // ---- START Sketch drawing
+
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
     const dimensions = getPageDimensions();
     const renderer = dimensions
@@ -102,37 +110,6 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
       canvasEl.id = 'p5-background-canvas';
     }
     p5InstanceRef.current = p5Instance;
-
-    // Find first page node and load all images
-    const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
-    if (firstPageNode) {
-      const pageData = firstPageNode.data as PageNodeData;
-      const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
-        source => source.type === NODE_TYPES.IMAGE
-      ) || [];
-      // const mousePointer = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
-
-      const loadedImages: ImageMetadataWithImage[] = [];
-
-      imageNodesMetadata.forEach(imageNodeMetadata => {
-        if (imageNodeMetadata?.data) {
-          const imageData = imageNodeMetadata.data as Partial<ImageNodeData>;
-
-          let loadedImage: p5.Image | null = null;
-          if (imageData.path) {
-            const imagePath = withCorsProxy(imageData.path);
-            loadedImage = p5Instance.loadImage(imagePath);
-          }
-
-          loadedImages.push({
-            ...imageData,
-            loadedImage
-          });
-        }
-      });
-
-      imageMetadataListRef.current = loadedImages;
-    }
   };
 
   const draw = (p5Instance: p5) => {

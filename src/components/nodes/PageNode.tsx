@@ -38,7 +38,8 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                     left: `50%`,
                     width: '10px',
                     height: '10px',
-                    backgroundColor: '#D05774'
+                    backgroundColor: '#D05774',
+                    border: '1px solid black'
                 }}
             />
             {/*------------------- outputs ------------------- */}
@@ -46,7 +47,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                 type="source"
                 id={HandleTypes.RED_OUTPUT}
                 position={Position.Bottom}
-                style={{ width: '10px', height: '10px', backgroundColor: '#D05774' }}
+                style={{ width: '10px', height: '10px', backgroundColor: '#D05774', border: '1px solid black'}}
             />
 
             <b>{data.label + "-" + id}</b>
