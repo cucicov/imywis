@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://imywis-services-production.up.railway.app:8080';
+const API_BASE_URL = 'https://imywis-services-production.up.railway.app';
 const NODES_API_PATH = '/api/nodes';
 
 export const APP_CONFIG = {
