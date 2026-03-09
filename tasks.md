@@ -9,6 +9,9 @@
 - https://www.ephotozine.com/resize/articles/22672/I_See_You.jpg?RTUdGk5cXyJFCgsJVANtdxU+cVRdHxFYFw1Gewk0T1JYFEtzen5YdgthHHsvEVxR
 - https://www.ephotozine.com/resize/articles/22672/Lollycat.jpg?RTUdGk5cXyJFCgsJVANtdxU+cVRdHxFYFw1Gewk0T1JYFEtzen5YdgthHHsvEVxR
 - cursor: https://blob.gifcities.org/gifcities/2CEGEQDTBN7R4YYOD436RPUZCQQHZVZO.gif
+- GIF Bg: https://blob.gifcities.org/gifcities/7CQFXNDVE7KERJ3Y26PVSRKANAMFWPLE.gif
+- GIF Bg: https://blob.gifcities.org/gifcities/DMQTXVF6TEIIGPKUJJQJSVPTO2TEZA2E.gif
+- GIF Bg: https://blob.gifcities.org/gifcities/H5AWBXGZTCQ3E3W7FJMW2D5NTTPIL6GO.gif
 
 
 **RULES**

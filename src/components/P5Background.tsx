@@ -25,6 +25,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
   const sceneBufferRef = useRef<p5.Graphics | null>(null);
   const renderSignatureRef = useRef('');
   const mousePointerRef = useRef<string | null>(null);
+  const hasLivePreviewRef = useRef(false);
   const imageCacheRef = useRef<Map<string, p5.Image>>(new Map());
   const lastRedrawAtRef = useRef(0);
   const pendingRedrawTimerRef = useRef<number | null>(null);
@@ -82,6 +83,9 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
   const requestRedraw = () => {
     const p5Instance = p5InstanceRef.current;
     if (!p5Instance) {
+      return;
+    }
+    if (hasLivePreviewRef.current) {
       return;
     }
 
@@ -185,12 +189,34 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
 
       imageMetadataListRef.current = newImageMetadataList;
       backgroundMetadataListRef.current = newBackgroundMetadataList;
-      requestRedraw();
+      const hasLivePreview = isGifPath(mousePointerRef.current)
+        || newImageMetadataList.some(image => isGifPath(image.path))
+        || newBackgroundMetadataList.some(background => isGifPath(background.sourceImageData?.path));
+      hasLivePreviewRef.current = hasLivePreview;
+
+      if (hasLivePreview) {
+        if (pendingRedrawTimerRef.current !== null) {
+          window.clearTimeout(pendingRedrawTimerRef.current);
+          pendingRedrawTimerRef.current = null;
+        }
+        if (sceneBufferRef.current) {
+          sceneBufferRef.current.remove();
+          sceneBufferRef.current = null;
+        }
+        renderSignatureRef.current = '';
+        p5InstanceRef.current.frameRate(30);
+        p5InstanceRef.current.loop();
+      } else {
+        p5InstanceRef.current.noLoop();
+        requestRedraw();
+      }
     } else {
       imageMetadataListRef.current = [];
       backgroundMetadataListRef.current = [];
+      hasLivePreviewRef.current = false;
       if (p5InstanceRef.current) {
         p5InstanceRef.current.cursor('default');
+        p5InstanceRef.current.noLoop();
         requestRedraw();
       }
     }
@@ -236,12 +262,89 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     }
 
     p5InstanceRef.current = p5Instance;
-    p5Instance.noLoop();
-    requestRedraw();
+    if (hasLivePreviewRef.current) {
+      p5Instance.frameRate(30);
+      p5Instance.loop();
+    } else {
+      p5Instance.noLoop();
+      requestRedraw();
+    }
+  };
+
+  const renderScene = (target: p5 | p5.Graphics, p5Instance: p5) => {
+    target.background(220);
+
+    backgroundMetadataListRef.current.forEach(backgroundData => {
+      if (!backgroundData.loadedImage || backgroundData.loadedImage.width <= 0 || !backgroundData.sourceImageData) {
+        return;
+      }
+
+      const sourceImageData = backgroundData.sourceImageData;
+      const imageWidth = resolveDimension(
+        sourceImageData.width,
+        sourceImageData.autoWidth,
+        backgroundData.loadedImage.width,
+        100
+      );
+      const imageHeight = resolveDimension(
+        sourceImageData.height,
+        sourceImageData.autoHeight,
+        backgroundData.loadedImage.height,
+        100
+      );
+
+      if (imageWidth <= 0 || imageHeight <= 0) {
+        return;
+      }
+
+      const style = backgroundData.style ?? 'tile';
+      const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, p5Instance.width);
+      const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, p5Instance.height);
+      const opacity = toNumberOrNull(sourceImageData.opacity) ?? 1;
+
+      target.push();
+      target.tint(255, opacity * 255);
+
+      if (style === 'tile') {
+        for (let y = 0; y < surfaceHeight; y += imageHeight) {
+          for (let x = 0; x < surfaceWidth; x += imageWidth) {
+            target.image(backgroundData.loadedImage, x, y, imageWidth, imageHeight);
+          }
+        }
+      } else {
+        const positionX = toNumberOrNull(sourceImageData.positionX) ?? p5Instance.width / 2;
+        const positionY = toNumberOrNull(sourceImageData.positionY) ?? p5Instance.height / 2;
+        target.image(backgroundData.loadedImage, positionX, positionY, imageWidth, imageHeight);
+      }
+
+      target.pop();
+    });
+
+    imageMetadataListRef.current.forEach(imageData => {
+      if (!imageData.loadedImage || imageData.loadedImage.width <= 0) {
+        return;
+      }
+
+      const width = resolveDimension(imageData.width, imageData.autoWidth, imageData.loadedImage.width, 100);
+      const height = resolveDimension(imageData.height, imageData.autoHeight, imageData.loadedImage.height, 100);
+      const positionX = toNumberOrNull(imageData.positionX) ?? p5Instance.width / 2;
+      const positionY = toNumberOrNull(imageData.positionY) ?? p5Instance.height / 2;
+      const opacity = toNumberOrNull(imageData.opacity) ?? 1;
+
+      target.push();
+      target.tint(255, opacity * 255);
+      target.image(imageData.loadedImage, positionX, positionY, width, height);
+      target.pop();
+    });
   };
 
   const draw = (p5Instance: p5) => {
     loadCursorImage(p5Instance, mousePointerRef.current);
+
+    if (hasLivePreviewRef.current) {
+      renderScene(p5Instance, p5Instance);
+      return;
+    }
 
     const signature = createRenderSignature(
       p5Instance.width,
@@ -259,70 +362,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
 
       sceneBufferRef.current = p5Instance.createGraphics(p5Instance.width, p5Instance.height);
       const scene = sceneBufferRef.current;
-      scene.background(220);
-
-      backgroundMetadataListRef.current.forEach(backgroundData => {
-        if (!backgroundData.loadedImage || backgroundData.loadedImage.width <= 0 || !backgroundData.sourceImageData) {
-          return;
-        }
-
-        const sourceImageData = backgroundData.sourceImageData;
-        const imageWidth = resolveDimension(
-          sourceImageData.width,
-          sourceImageData.autoWidth,
-          backgroundData.loadedImage.width,
-          100
-        );
-        const imageHeight = resolveDimension(
-          sourceImageData.height,
-          sourceImageData.autoHeight,
-          backgroundData.loadedImage.height,
-          100
-        );
-
-        if (imageWidth <= 0 || imageHeight <= 0) {
-          return;
-        }
-
-        const style = backgroundData.style ?? 'tile';
-        const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, p5Instance.width);
-        const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, p5Instance.height);
-        const opacity = toNumberOrNull(sourceImageData.opacity) ?? 1;
-
-        scene.push();
-        scene.tint(255, opacity * 255);
-
-        if (style === 'tile') {
-          for (let y = 0; y < surfaceHeight; y += imageHeight) {
-            for (let x = 0; x < surfaceWidth; x += imageWidth) {
-              scene.image(backgroundData.loadedImage, x, y, imageWidth, imageHeight);
-            }
-          }
-        } else {
-          const positionX = toNumberOrNull(sourceImageData.positionX) ?? p5Instance.width / 2;
-          const positionY = toNumberOrNull(sourceImageData.positionY) ?? p5Instance.height / 2;
-          scene.image(backgroundData.loadedImage, positionX, positionY, imageWidth, imageHeight);
-        }
-
-        scene.pop();
-      });
-
-      imageMetadataListRef.current.forEach(imageData => {
-        if (!imageData.loadedImage || imageData.loadedImage.width <= 0) {
-          return;
-        }
-
-        const width = resolveDimension(imageData.width, imageData.autoWidth, imageData.loadedImage.width, 100);
-        const height = resolveDimension(imageData.height, imageData.autoHeight, imageData.loadedImage.height, 100);
-        const positionX = toNumberOrNull(imageData.positionX) ?? p5Instance.width / 2;
-        const positionY = toNumberOrNull(imageData.positionY) ?? p5Instance.height / 2;
-        const opacity = toNumberOrNull(imageData.opacity) ?? 1;
-
-        scene.push();
-        scene.tint(255, opacity * 255);
-        scene.image(imageData.loadedImage, positionX, positionY, width, height);
-        scene.pop();
-      });
+      renderScene(scene, p5Instance);
     }
 
     p5Instance.background(220);
@@ -361,6 +401,8 @@ const withCorsProxy = (path: string) =>
   path.startsWith('http')
     ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(path)}`
     : path;
+
+const isGifPath = (path: unknown) => typeof path === 'string' && /\.gif(?:$|[?#])/i.test(path.trim());
 
 const toBoolean = (value: unknown) => value === true || value === 'true';
 
