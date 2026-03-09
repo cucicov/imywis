@@ -1,7 +1,7 @@
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '');
 
 const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8080';
-const DEFAULT_PROD_API_BASE_URL = 'https://imywis-services-production.up.railway.app';
+const DEFAULT_PROD_API_BASE_URL = 'https://beautifulneon.xyz';
 const NODES_API_PATH = '/api/nodes';
 
 const API_BASE_URL = normalizeBaseUrl(
