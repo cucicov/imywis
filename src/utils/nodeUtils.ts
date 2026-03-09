@@ -1,5 +1,5 @@
 import { type Edge, type Node } from '@xyflow/react';
-import type { NodeMetadata } from '../types/nodeTypes';
+import {NODE_TYPES, type NodeMetadata} from '../types/nodeTypes';
 
 export const updateCurrentNode = (node: Node, field: string, newValue: unknown) => {
     return {
@@ -85,17 +85,15 @@ export const syncNodeDataFromSource = (
     sourceHandle: string | null | undefined
 ): Node => {
     if (!sourceNode || !sourceHandle) return targetNode;
-    console.log("Sync node: " + targetNode.id);
 
     const metadata: NodeMetadata = (targetNode.data.metadata as NodeMetadata) || { sourceNodes: [] };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { label, metadata: sourceMetadata, ...sourceData } = sourceNode.data;
-
-    // Include source node's metadata in the data if it exists
-    const dataToStore = {
-        ...sourceData,
-        ...(sourceMetadata ? { metadata: sourceMetadata } : {})
-    };
+    const sourceData = sourceNode.data as Record<string, unknown>;
+    // Background nodes need the full upstream image payload in metadata.
+    // Other nodes keep the previous reduced shape without duplicating source labels.
+    const dataToStore = targetNode.type === NODE_TYPES.BACKGROUND
+        ? sourceData
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        : (({label, ...rest}) => rest)(sourceData);
 
     // Check if this source already exists
     const existingIndex = metadata.sourceNodes.findIndex(

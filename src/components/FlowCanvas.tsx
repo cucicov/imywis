@@ -21,10 +21,13 @@ import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
 import P5Background from './P5Background.tsx';
 import ExportP5Project from './ExportP5Project.tsx';
+import BackgroundNode from './nodes/BackgroundNode.tsx';
+import AddBackgroundNodeButton from './nodes/AddBackgroundNodeButton.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
-  imageNode: ImageNode
+  imageNode: ImageNode,
+  backgroundNode: BackgroundNode,
 };
 
 const initialNodes = [
@@ -73,8 +76,9 @@ const FlowCanvas = () => {
           node.data.metadata.sourceNodes.forEach((source: { nodeId: string; handleType: string }) => {
             const connectionKey = `${source.nodeId}:${source.handleType}`;
             const nodeActiveConnections = activeConnections.get(node.id);
+            const sourceNodeStillExists = nodeMap.has(source.nodeId);
 
-            if (!nodeActiveConnections || !nodeActiveConnections.has(connectionKey)) {
+            if (!sourceNodeStillExists || !nodeActiveConnections || !nodeActiveConnections.has(connectionKey)) {
               updatedNode = removeSourceNodeMetadata(updatedNode, source.nodeId, source.handleType) as typeof node;
             }
           });
@@ -140,6 +144,7 @@ const FlowCanvas = () => {
         <NodeStateTransfer />
         <AddPageNodeButton />
         <AddImageNodeButton />
+        <AddBackgroundNodeButton />
         <Background/>
       </ReactFlow>
     </div>

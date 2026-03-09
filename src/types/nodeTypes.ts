@@ -1,6 +1,7 @@
 export const NODE_TYPES = {
     PAGE: 'pageNode',
     IMAGE: 'imageNode',
+    BACKGROUND: 'backgroundNode',
 } as const;
 
 export type NodeType = typeof NODE_TYPES[keyof typeof NODE_TYPES];
@@ -33,5 +34,17 @@ export type ImageNodeData = {
     positionX?: number;
     positionY?: number;
     opacity?: number;
+    metadata?: NodeMetadata;
+};
+
+export type BackgroundStyle = 'tile' | 'fullscreen' | 'stretch' | 'contain';
+
+export type BackgroundNodeData = {
+    label: string;
+    style?: BackgroundStyle;
+    width?: number;
+    height?: number;
+    autoWidth?: boolean;
+    autoHeight?: boolean;
     metadata?: NodeMetadata;
 };
