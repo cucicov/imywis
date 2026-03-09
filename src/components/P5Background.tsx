@@ -1,9 +1,9 @@
 import Sketch from 'react-p5';
 import type p5 from 'react-p5/node_modules/@types/p5';
 import type { Node } from '@xyflow/react';
-import { NODE_TYPES, type PageNodeData, type ImageNodeData } from '../types/nodeTypes';
-import { useEffect, useRef } from 'react';
-import {toNumberOrNull} from "../utils/numberUtils.ts";
+import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type NodeMetadata, type PageNodeData} from '../types/nodeTypes';
+import {useEffect, useMemo, useRef} from 'react';
+import {toNumberOrNull} from '../utils/numberUtils.ts';
 
 type P5BackgroundProps = {
   nodes: Node[];
@@ -13,21 +13,59 @@ type ImageMetadataWithImage = Partial<ImageNodeData> & {
   loadedImage: p5.Image | null;
 };
 
+type BackgroundMetadataWithImage = Partial<BackgroundNodeData> & {
+  loadedImage: p5.Image | null;
+  sourceImageData: Partial<ImageNodeData> | null;
+};
+
 const P5Background = ({ nodes }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
-  const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]); //TODO: refactor this, find a way to organize the objects passed from nodes.
-  const mousePointerRef = useRef<string | null>(null); //TODO: refactor as above.
+  const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
+  const backgroundMetadataListRef = useRef<BackgroundMetadataWithImage[]>([]);
+  const sceneBufferRef = useRef<p5.Graphics | null>(null);
+  const renderSignatureRef = useRef('');
+  const mousePointerRef = useRef<string | null>(null);
+  const imageCacheRef = useRef<Map<string, p5.Image>>(new Map());
+  const lastRedrawAtRef = useRef(0);
+  const pendingRedrawTimerRef = useRef<number | null>(null);
 
-  // ---- Helper functions
+  const pageNodeData = useMemo(() => {
+    const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
+    return firstPageNode?.data as PageNodeData | undefined;
+  }, [nodes]);
+
+  const pageContentSignature = useMemo(() => {
+    if (!pageNodeData) {
+      return 'no-page-data';
+    }
+    return JSON.stringify({
+      width: pageNodeData.width ?? null,
+      height: pageNodeData.height ?? null,
+      mousePointer: (pageNodeData.mousePointer ?? (pageNodeData as PageNodeData & {mouse?: string}).mouse ?? '').trim(),
+      metadata: pageNodeData.metadata?.sourceNodes ?? [],
+    });
+  }, [pageNodeData]);
+
+  const pageDimensionSignature = useMemo(() => {
+    if (!pageNodeData) {
+      return 'no-page-dimensions';
+    }
+    return JSON.stringify({
+      width: pageNodeData.width ?? null,
+      height: pageNodeData.height ?? null,
+    });
+  }, [pageNodeData]);
 
   const getPageDimensions = () => {
     const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
     const pageData = firstPageNode?.data as PageNodeData | undefined;
     const width = toNumberOrNull(pageData?.width);
     const height = toNumberOrNull(pageData?.height);
+
     if (width !== null && height !== null) {
       return { width, height };
     }
+
     return null;
   };
 
@@ -41,50 +79,137 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     p5Instance.cursor(imagePath);
   };
 
+  const requestRedraw = () => {
+    const p5Instance = p5InstanceRef.current;
+    if (!p5Instance) {
+      return;
+    }
 
-  // ---- LOAD IMAGES
+    const minIntervalMs = 1000;
+    const now = Date.now();
+    const elapsed = now - lastRedrawAtRef.current;
+
+    if (elapsed >= minIntervalMs) {
+      if (pendingRedrawTimerRef.current !== null) {
+        window.clearTimeout(pendingRedrawTimerRef.current);
+        pendingRedrawTimerRef.current = null;
+      }
+      lastRedrawAtRef.current = now;
+      p5Instance.redraw();
+      return;
+    }
+
+    if (pendingRedrawTimerRef.current !== null) {
+      return;
+    }
+
+    pendingRedrawTimerRef.current = window.setTimeout(() => {
+      pendingRedrawTimerRef.current = null;
+      lastRedrawAtRef.current = Date.now();
+      p5InstanceRef.current?.redraw();
+    }, minIntervalMs - elapsed);
+  };
+
   useEffect(() => {
-    // Find first page node and extract all image metadata
-    const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
-    if (firstPageNode && p5InstanceRef.current) {
-      const pageData = firstPageNode.data as PageNodeData;
+    if (pageNodeData && p5InstanceRef.current) {
+      const pageData = pageNodeData;
       const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
         source => source.type === NODE_TYPES.IMAGE
+      ) || [];
+      const backgroundNodesMetadata = pageData.metadata?.sourceNodes.filter(
+        source => source.type === NODE_TYPES.BACKGROUND
       ) || [];
       mousePointerRef.current = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
 
       const newImageMetadataList: ImageMetadataWithImage[] = [];
+      const newBackgroundMetadataList: BackgroundMetadataWithImage[] = [];
 
       imageNodesMetadata.forEach(imageNodeMetadata => {
-        if (imageNodeMetadata?.data) {
-          const newImageData = imageNodeMetadata.data as Partial<ImageNodeData>;
-
-          // Load image if path exists
-          let loadedImage: p5.Image | null = null;
-          if (newImageData.path && p5InstanceRef.current) {
-            const imagePath = withCorsProxy(newImageData.path);
-            loadedImage = p5InstanceRef.current.loadImage(imagePath);
-          }
-
-          newImageMetadataList.push({
-            ...newImageData,
-            loadedImage
-          });
+        if (!imageNodeMetadata?.data) {
+          return;
         }
+
+        const newImageData = imageNodeMetadata.data as Partial<ImageNodeData>;
+        let loadedImage: p5.Image | null = null;
+
+        if (newImageData.path && p5InstanceRef.current) {
+          const imagePath = withCorsProxy(newImageData.path);
+          const cachedImage = imageCacheRef.current.get(imagePath);
+          if (cachedImage) {
+            loadedImage = cachedImage;
+          } else {
+            loadedImage = p5InstanceRef.current.loadImage(imagePath, (img) => {
+              imageCacheRef.current.set(imagePath, img);
+              requestRedraw();
+            });
+          }
+        }
+
+        newImageMetadataList.push({
+          ...newImageData,
+          loadedImage,
+        });
+      });
+
+      backgroundNodesMetadata.forEach(backgroundNodeMetadata => {
+        if (!backgroundNodeMetadata?.data) {
+          return;
+        }
+
+        const backgroundData = backgroundNodeMetadata.data as Partial<BackgroundNodeData> & {metadata?: NodeMetadata};
+        const sourceImageMetadata = backgroundData.metadata?.sourceNodes.find(
+          source => source.type === NODE_TYPES.IMAGE
+        );
+        const sourceImageData = (sourceImageMetadata?.data ?? null) as Partial<ImageNodeData> | null;
+
+        let loadedImage: p5.Image | null = null;
+        if (sourceImageData?.path && p5InstanceRef.current) {
+          const imagePath = withCorsProxy(sourceImageData.path);
+          const cachedImage = imageCacheRef.current.get(imagePath);
+          if (cachedImage) {
+            loadedImage = cachedImage;
+          } else {
+            loadedImage = p5InstanceRef.current.loadImage(imagePath, (img) => {
+              imageCacheRef.current.set(imagePath, img);
+              requestRedraw();
+            });
+          }
+        }
+
+        newBackgroundMetadataList.push({
+          ...backgroundData,
+          loadedImage,
+          sourceImageData,
+        });
       });
 
       imageMetadataListRef.current = newImageMetadataList;
+      backgroundMetadataListRef.current = newBackgroundMetadataList;
+      requestRedraw();
     } else {
       imageMetadataListRef.current = [];
+      backgroundMetadataListRef.current = [];
       if (p5InstanceRef.current) {
         p5InstanceRef.current.cursor('default');
+        requestRedraw();
       }
     }
-  }, [nodes]);
+  }, [pageContentSignature, pageNodeData]);
 
-  // ---- SET PAGE DIMENSIONS
+  useEffect(() => {
+    return () => {
+      if (pendingRedrawTimerRef.current !== null) {
+        window.clearTimeout(pendingRedrawTimerRef.current);
+        pendingRedrawTimerRef.current = null;
+      }
+      sceneBufferRef.current?.remove();
+      sceneBufferRef.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     if (!p5InstanceRef.current) return;
+
     const dimensions = getPageDimensions();
     if (dimensions) {
       p5InstanceRef.current.resizeCanvas(dimensions.width, dimensions.height);
@@ -94,48 +219,115 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
         p5InstanceRef.current.windowHeight
       );
     }
-  }, [nodes]);
 
-
-  // ---- START Sketch drawing
+    requestRedraw();
+  }, [pageDimensionSignature]);
 
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
     const dimensions = getPageDimensions();
     const renderer = dimensions
       ? p5Instance.createCanvas(dimensions.width, dimensions.height)
       : p5Instance.createCanvas(p5Instance.windowWidth, p5Instance.windowHeight);
+
     renderer.parent(canvasParentRef);
     const canvasEl = (renderer as unknown as { elt?: Element }).elt;
     if (canvasEl instanceof HTMLCanvasElement) {
       canvasEl.id = 'p5-background-canvas';
     }
+
     p5InstanceRef.current = p5Instance;
+    p5Instance.noLoop();
+    requestRedraw();
   };
 
   const draw = (p5Instance: p5) => {
-    p5Instance.background(220);
     loadCursorImage(p5Instance, mousePointerRef.current);
 
-    if (imageMetadataListRef.current.length > 0) {
-      // Draw all images from the list
-      imageMetadataListRef.current.forEach(imageData => {
-        if (imageData.loadedImage && imageData.loadedImage.width > 0) {
-          const width = imageData.autoWidth
-            ? imageData.loadedImage.width
-            : (imageData.width ?? 100);
-          const height = imageData.autoHeight
-            ? imageData.loadedImage.height
-            : (imageData.height ?? 100);
-          const positionX = imageData.positionX ?? p5Instance.width / 2;
-          const positionY = imageData.positionY ?? p5Instance.height / 2;
-          const opacity = imageData.opacity ?? 1;
+    const signature = createRenderSignature(
+      p5Instance.width,
+      p5Instance.height,
+      backgroundMetadataListRef.current,
+      imageMetadataListRef.current
+    );
 
-          p5Instance.push();
-          p5Instance.tint(255, opacity * 255);
-          p5Instance.image(imageData.loadedImage, positionX, positionY, width, height);
-          p5Instance.pop();
+    if (!sceneBufferRef.current || renderSignatureRef.current !== signature) {
+      renderSignatureRef.current = signature;
+
+      if (sceneBufferRef.current) {
+        sceneBufferRef.current.remove();
+      }
+
+      sceneBufferRef.current = p5Instance.createGraphics(p5Instance.width, p5Instance.height);
+      const scene = sceneBufferRef.current;
+      scene.background(220);
+
+      backgroundMetadataListRef.current.forEach(backgroundData => {
+        if (!backgroundData.loadedImage || backgroundData.loadedImage.width <= 0 || !backgroundData.sourceImageData) {
+          return;
         }
+
+        const sourceImageData = backgroundData.sourceImageData;
+        const imageWidth = resolveDimension(
+          sourceImageData.width,
+          sourceImageData.autoWidth,
+          backgroundData.loadedImage.width,
+          100
+        );
+        const imageHeight = resolveDimension(
+          sourceImageData.height,
+          sourceImageData.autoHeight,
+          backgroundData.loadedImage.height,
+          100
+        );
+
+        if (imageWidth <= 0 || imageHeight <= 0) {
+          return;
+        }
+
+        const style = backgroundData.style ?? 'tile';
+        const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, p5Instance.width);
+        const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, p5Instance.height);
+        const opacity = toNumberOrNull(sourceImageData.opacity) ?? 1;
+
+        scene.push();
+        scene.tint(255, opacity * 255);
+
+        if (style === 'tile') {
+          for (let y = 0; y < surfaceHeight; y += imageHeight) {
+            for (let x = 0; x < surfaceWidth; x += imageWidth) {
+              scene.image(backgroundData.loadedImage, x, y, imageWidth, imageHeight);
+            }
+          }
+        } else {
+          const positionX = toNumberOrNull(sourceImageData.positionX) ?? p5Instance.width / 2;
+          const positionY = toNumberOrNull(sourceImageData.positionY) ?? p5Instance.height / 2;
+          scene.image(backgroundData.loadedImage, positionX, positionY, imageWidth, imageHeight);
+        }
+
+        scene.pop();
       });
+
+      imageMetadataListRef.current.forEach(imageData => {
+        if (!imageData.loadedImage || imageData.loadedImage.width <= 0) {
+          return;
+        }
+
+        const width = resolveDimension(imageData.width, imageData.autoWidth, imageData.loadedImage.width, 100);
+        const height = resolveDimension(imageData.height, imageData.autoHeight, imageData.loadedImage.height, 100);
+        const positionX = toNumberOrNull(imageData.positionX) ?? p5Instance.width / 2;
+        const positionY = toNumberOrNull(imageData.positionY) ?? p5Instance.height / 2;
+        const opacity = toNumberOrNull(imageData.opacity) ?? 1;
+
+        scene.push();
+        scene.tint(255, opacity * 255);
+        scene.image(imageData.loadedImage, positionX, positionY, width, height);
+        scene.pop();
+      });
+    }
+
+    p5Instance.background(220);
+    if (sceneBufferRef.current) {
+      p5Instance.image(sceneBufferRef.current, 0, 0);
     }
   };
 
@@ -146,6 +338,8 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     } else {
       p5Instance.resizeCanvas(p5Instance.windowWidth, p5Instance.windowHeight);
     }
+
+    requestRedraw();
   };
 
   return (
@@ -167,5 +361,64 @@ const withCorsProxy = (path: string) =>
   path.startsWith('http')
     ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(path)}`
     : path;
+
+const toBoolean = (value: unknown) => value === true || value === 'true';
+
+const resolveDimension = (
+  configuredSize: unknown,
+  autoSize: unknown,
+  naturalSize: number,
+  fallback: number
+) => {
+  if (toBoolean(autoSize)) {
+    return naturalSize;
+  }
+  return toNumberOrNull(configuredSize) ?? fallback;
+};
+
+const resolveSurfaceDimension = (configuredSize: unknown, autoSize: unknown, fallback: number) => {
+  if (toBoolean(autoSize)) {
+    return fallback;
+  }
+  return toNumberOrNull(configuredSize) ?? fallback;
+};
+
+const createRenderSignature = (
+  canvasWidth: number,
+  canvasHeight: number,
+  backgrounds: BackgroundMetadataWithImage[],
+  images: ImageMetadataWithImage[]
+) => {
+  const backgroundSignature = backgrounds.map(item => ({
+    style: item.style ?? 'tile',
+    width: item.width ?? null,
+    height: item.height ?? null,
+    autoWidth: item.autoWidth ?? false,
+    autoHeight: item.autoHeight ?? false,
+    loadedImageWidth: item.loadedImage?.width ?? 0,
+    loadedImageHeight: item.loadedImage?.height ?? 0,
+    sourceImageData: item.sourceImageData ?? null,
+  }));
+
+  const imageSignature = images.map(item => ({
+    path: item.path ?? '',
+    width: item.width ?? null,
+    height: item.height ?? null,
+    autoWidth: item.autoWidth ?? false,
+    autoHeight: item.autoHeight ?? false,
+    positionX: item.positionX ?? null,
+    positionY: item.positionY ?? null,
+    opacity: item.opacity ?? null,
+    loadedImageWidth: item.loadedImage?.width ?? 0,
+    loadedImageHeight: item.loadedImage?.height ?? 0,
+  }));
+
+  return JSON.stringify({
+    canvasWidth,
+    canvasHeight,
+    backgrounds: backgroundSignature,
+    images: imageSignature,
+  });
+};
 
 export default P5Background;
