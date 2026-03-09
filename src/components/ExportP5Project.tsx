@@ -98,6 +98,11 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [statusType, setStatusType] = useState<'success' | 'error' | null>(null);
 
+    const openOrRefreshPreviewTab = () => {
+        const previewTab = window.open(APP_CONFIG.publishRedirectUrl, 'p5-preview-tab');
+        previewTab?.focus();
+    };
+
     const onExport = async () => {
         try {
             setIsLoading(true);
@@ -142,6 +147,7 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
 
             setStatusMessage(payload?.message ?? 'Nodes processed successfully');
             setStatusType('success');
+            openOrRefreshPreviewTab();
         } catch (error) {
             setStatusMessage(
                 error instanceof Error
