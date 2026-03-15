@@ -13,11 +13,25 @@ const labelStyle: CSSProperties = {
 
 const inputStyle: CSSProperties = {
     fontSize: '11px',
-    width: '100px',
+    width: '150px',
     border: 0,
     background: '#fff',
     opacity: 0.8,
     color: 'black',
+};
+
+const rowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+    marginBottom: '4px',
+};
+
+const rowLabelStyle: CSSProperties = {
+    ...labelStyle,
+    width: '70px',
+    flexShrink: 0,
+    lineHeight: '18px',
 };
 
 const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEXT>>) => {
@@ -107,18 +121,9 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
             />
 
             <b>{data.label + '-' + id}</b>
-            <div style={{display: 'flex', marginTop: '6px'}}>
-                <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                    <label style={labelStyle}>text:</label>
-                    <label style={labelStyle}>font:</label>
-                    <label style={labelStyle}>size:</label>
-                    <label style={labelStyle}>width(px):</label>
-                    <label style={labelStyle}>height(px):</label>
-                    <label style={labelStyle}>position-x:</label>
-                    <label style={labelStyle}>position-y:</label>
-                    <label style={labelStyle}>opacity:</label>
-                </div>
-                <div style={{flex: 1.8, display: 'flex', flexDirection: 'column', gap: '4px'}}>
+            <div style={{marginTop: '6px'}}>
+                <div style={rowStyle}>
+                    <label htmlFor="field-text" style={rowLabelStyle}>text:</label>
                     <textarea
                         id="field-text"
                         className="nodrag"
@@ -127,41 +132,50 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         rows={4}
                         style={{
                             ...inputStyle,
-                            width: '150px',
                             resize: 'vertical',
                             minHeight: '60px',
                         }}
                     />
-                    <select
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-font" style={rowLabelStyle}>font:</label>
+                    <div>
+                        <select
                         id="field-font"
                         className="nodrag"
                         value={data.font ?? 'sans-serif'}
                         onChange={onFieldChange}
                         style={inputStyle}
                     >
-                        <option value="sans-serif">Default</option>
-                    </select>
-                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px 10px', marginBottom: '4px'}}>
-                        {[
-                            {id: 'bold', label: 'bold'},
-                            {id: 'italic', label: 'italic'},
-                            {id: 'underline', label: 'underline'},
-                            {id: 'strikethrough', label: 'strikethrough'},
-                            {id: 'caps', label: 'CAPS'},
-                        ].map((option) => (
-                            <label key={option.id} style={{fontSize: '10px', color: '#792D05', display: 'flex', alignItems: 'center', gap: '4px'}}>
-                                <input
-                                    id={`field-${option.id}`}
-                                    className="nodrag"
-                                    type="checkbox"
-                                    checked={Boolean(data[option.id as keyof TextNodeData])}
-                                    onChange={onFieldChange}
-                                    style={{width: '14px', height: '14px', accentColor: '#792D05', opacity: 0.8}}
-                                />
-                                {option.label}
-                            </label>
-                        ))}
+                            <option value="sans-serif">Default</option>
+                        </select>
+                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px 10px', marginTop: '4px', maxWidth: '170px'}}>
+                            {[
+                                {id: 'bold', label: 'bold'},
+                                {id: 'italic', label: 'italic'},
+                                {id: 'underline', label: 'underline'},
+                                {id: 'strikethrough', label: 'strikethrough'},
+                                {id: 'caps', label: 'CAPS'},
+                            ].map((option) => (
+                                <label key={option.id} style={{fontSize: '10px', color: '#792D05', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                                    <input
+                                        id={`field-${option.id}`}
+                                        className="nodrag"
+                                        type="checkbox"
+                                        checked={Boolean(data[option.id as keyof TextNodeData])}
+                                        onChange={onFieldChange}
+                                        style={{width: '14px', height: '14px', accentColor: '#792D05', opacity: 0.8}}
+                                    />
+                                    {option.label}
+                                </label>
+                            ))}
+                        </div>
                     </div>
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-size" style={rowLabelStyle}>size:</label>
                     <input
                         id="field-size"
                         className="nodrag"
@@ -171,6 +185,10 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         onChange={onFieldChange}
                         style={inputStyle}
                     />
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-width" style={rowLabelStyle}>width(px):</label>
                     <input
                         id="field-width"
                         className="nodrag"
@@ -180,6 +198,10 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         onChange={onFieldChange}
                         style={inputStyle}
                     />
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-height" style={rowLabelStyle}>height(px):</label>
                     <input
                         id="field-height"
                         className="nodrag"
@@ -189,6 +211,10 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         onChange={onFieldChange}
                         style={inputStyle}
                     />
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-positionX" style={rowLabelStyle}>position-x:</label>
                     <input
                         id="field-positionX"
                         className="nodrag"
@@ -197,6 +223,10 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         onChange={onFieldChange}
                         style={inputStyle}
                     />
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-positionY" style={rowLabelStyle}>position-y:</label>
                     <input
                         id="field-positionY"
                         className="nodrag"
@@ -205,6 +235,10 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         onChange={onFieldChange}
                         style={inputStyle}
                     />
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-opacity" style={rowLabelStyle}>opacity:</label>
                     <input
                         id="field-opacity"
                         className="nodrag"
