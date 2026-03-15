@@ -3,6 +3,7 @@ export const HandleTypes = {
     RED_OUTPUT: 'red-output',
     ORANGE_INPUT: 'orange-input',
     ORANGE_OUTPUT: 'orange-output',
+    ORANGE_OUTPUT_2: 'orange-output-2',
     TURQUOISE_INPUT: 'turquoise-input',
     TURQUOISE_OUTPUT: 'turquoise-output',
     SAGE_INPUT: 'sage-input',

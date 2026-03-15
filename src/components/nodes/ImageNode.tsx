@@ -59,11 +59,13 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     border: '1px solid black',
                 }}
             />
+            {/*------------------- outputs ------------------- */}
+
             <Handle
-                key="input-2"
-                type="target"
+                key="output-2"
+                type="source"
                 position={Position.Top}
-                id={HandleTypes.ORANGE_INPUT}
+                id={HandleTypes.ORANGE_OUTPUT_2}
                 style={{
                     left: `75%`,
                     width: '10px',
@@ -71,7 +73,6 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     backgroundColor: '#FBB38D'
                 }}
             />
-            {/*------------------- outputs ------------------- */}
             <Handle type="source" position={Position.Bottom}
                     key="output-0"
                     id={HandleTypes.ORANGE_OUTPUT}
