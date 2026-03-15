@@ -80,3 +80,69 @@ button:focus-visible {
     transform: rotate(360deg);
   }
 }
+
+.react-flow__edge .react-flow__edge-path {
+  stroke-width: 2.5px;
+  fill: none !important;
+  animation: pastel-rainbow-edge-stroke 6s linear infinite;
+}
+
+.react-flow__arrowhead polyline,
+.react-flow__arrowhead polyline.arrowclosed {
+  animation: pastel-rainbow-edge-arrow 6s linear infinite;
+}
+
+@keyframes pastel-rainbow-edge-stroke {
+  0% {
+    stroke: #ffadad;
+  }
+  16% {
+    stroke: #ffd6a5;
+  }
+  33% {
+    stroke: #fdffb6;
+  }
+  50% {
+    stroke: #caffbf;
+  }
+  66% {
+    stroke: #9bf6ff;
+  }
+  83% {
+    stroke: #a0c4ff;
+  }
+  100% {
+    stroke: #ffc6ff;
+  }
+}
+
+@keyframes pastel-rainbow-edge-arrow {
+  0% {
+    stroke: #ffadad;
+    fill: #ffadad;
+  }
+  16% {
+    stroke: #ffd6a5;
+    fill: #ffd6a5;
+  }
+  33% {
+    stroke: #fdffb6;
+    fill: #fdffb6;
+  }
+  50% {
+    stroke: #caffbf;
+    fill: #caffbf;
+  }
+  66% {
+    stroke: #9bf6ff;
+    fill: #9bf6ff;
+  }
+  83% {
+    stroke: #a0c4ff;
+    fill: #a0c4ff;
+  }
+  100% {
+    stroke: #ffc6ff;
+    fill: #ffc6ff;
+  }
+}
