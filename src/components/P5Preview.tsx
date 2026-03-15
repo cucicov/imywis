@@ -18,13 +18,14 @@ type BackgroundMetadataWithImage = Partial<BackgroundNodeData> & {
   sourceImageData: Partial<ImageNodeData> | null;
 };
 
-const P5Background = ({ nodes }: P5BackgroundProps) => {
+const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
   const backgroundMetadataListRef = useRef<BackgroundMetadataWithImage[]>([]);
   const sceneBufferRef = useRef<p5.Graphics | null>(null);
   const renderSignatureRef = useRef('');
   const mousePointerRef = useRef<string | null>(null);
+  const pageBackgroundColorRef = useRef('#ffffff');
   const hasLivePreviewRef = useRef(false);
   const imageCacheRef = useRef<Map<string, p5.Image>>(new Map());
   const lastRedrawAtRef = useRef(0);
@@ -43,6 +44,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
       width: pageNodeData.width ?? null,
       height: pageNodeData.height ?? null,
       mousePointer: (pageNodeData.mousePointer ?? (pageNodeData as PageNodeData & {mouse?: string}).mouse ?? '').trim(),
+      backgroundColor: pageNodeData.backgroundColor ?? '#ffffff',
       metadata: pageNodeData.metadata?.sourceNodes ?? [],
     });
   }, [pageNodeData]);
@@ -124,6 +126,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
         source => source.type === NODE_TYPES.BACKGROUND
       ) || [];
       mousePointerRef.current = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
+      pageBackgroundColorRef.current = resolvePageBackgroundColor(pageData.backgroundColor);
 
       const newImageMetadataList: ImageMetadataWithImage[] = [];
       const newBackgroundMetadataList: BackgroundMetadataWithImage[] = [];
@@ -213,6 +216,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     } else {
       imageMetadataListRef.current = [];
       backgroundMetadataListRef.current = [];
+      pageBackgroundColorRef.current = '#ffffff';
       hasLivePreviewRef.current = false;
       if (p5InstanceRef.current) {
         p5InstanceRef.current.cursor('default');
@@ -272,7 +276,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
   };
 
   const renderScene = (target: p5 | p5.Graphics, p5Instance: p5) => {
-    target.background(220);
+    target.background(pageBackgroundColorRef.current);
 
     backgroundMetadataListRef.current.forEach(backgroundData => {
       if (!backgroundData.loadedImage || backgroundData.loadedImage.width <= 0 || !backgroundData.sourceImageData) {
@@ -349,6 +353,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
     const signature = createRenderSignature(
       p5Instance.width,
       p5Instance.height,
+      pageBackgroundColorRef.current,
       backgroundMetadataListRef.current,
       imageMetadataListRef.current
     );
@@ -365,7 +370,7 @@ const P5Background = ({ nodes }: P5BackgroundProps) => {
       renderScene(scene, p5Instance);
     }
 
-    p5Instance.background(220);
+    p5Instance.background(pageBackgroundColorRef.current);
     if (sceneBufferRef.current) {
       p5Instance.image(sceneBufferRef.current, 0, 0);
     }
@@ -428,6 +433,7 @@ const resolveSurfaceDimension = (configuredSize: unknown, autoSize: unknown, fal
 const createRenderSignature = (
   canvasWidth: number,
   canvasHeight: number,
+  pageBackgroundColor: string,
   backgrounds: BackgroundMetadataWithImage[],
   images: ImageMetadataWithImage[]
 ) => {
@@ -458,9 +464,19 @@ const createRenderSignature = (
   return JSON.stringify({
     canvasWidth,
     canvasHeight,
+    pageBackgroundColor,
     backgrounds: backgroundSignature,
     images: imageSignature,
   });
 };
 
-export default P5Background;
+const resolvePageBackgroundColor = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return '#ffffff';
+  }
+
+  const trimmed = value.trim();
+  return /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(trimmed) ? trimmed : '#ffffff';
+};
+
+export default P5Preview;

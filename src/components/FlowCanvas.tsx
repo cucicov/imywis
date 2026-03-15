@@ -19,7 +19,7 @@ import type {PageNodeData} from "../types/nodeTypes.ts";
 import {syncNodeDataFromSource, removeSourceNodeMetadata} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
-import P5Background from './P5Background.tsx';
+import P5Preview from './P5Preview.tsx';
 import ExportP5Project from './ExportP5Project.tsx';
 import BackgroundNode from './nodes/BackgroundNode.tsx';
 import AddBackgroundNodeButton from './nodes/AddBackgroundNodeButton.tsx';
@@ -35,7 +35,7 @@ const initialNodes = [
   {
     id: '1',
     type: NODE_TYPES.PAGE,
-    data: {label: NODE_TYPES.PAGE, name: 'index.html'} as PageNodeData,
+    data: {label: NODE_TYPES.PAGE, name: 'index.html', backgroundColor: '#ffffff'} as PageNodeData,
     position: { x: 250, y: 5 },
   }
 ];
@@ -133,6 +133,12 @@ const FlowCanvas = () => {
     };
   }, [nodes, viewportSize.height, viewportSize.width]);
 
+  const pageBackgroundColor = useMemo(() => {
+    const pageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
+    const pageData = pageNode?.data as PageNodeData | undefined;
+    return resolvePageBackgroundColor(pageData?.backgroundColor);
+  }, [nodes]);
+
   // validate node connections based on the node input type
   const isValidConnection = useCallback((connection: Edge | Connection) => {
     const sourceHandle = connection.sourceHandle;
@@ -169,30 +175,37 @@ const FlowCanvas = () => {
           position: 'relative',
         }}
       >
-        <P5Background nodes={nodes} />
         <ExportP5Project nodes={nodes} />
-        <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            isValidConnection={isValidConnection}
-            fitView
-            style={{ width: '100%', height: '100%' }}
-          >
-            <NodeStateTransfer />
-            <AddPageNodeButton />
-            <AddImageNodeButton />
-            <AddBackgroundNodeButton />
-            <Background/>
-          </ReactFlow>
-        </div>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          isValidConnection={isValidConnection}
+          fitView
+          style={{ width: '100%', height: '100%' }}
+        >
+          <P5Preview nodes={nodes} />
+          <NodeStateTransfer />
+          <AddPageNodeButton />
+          <AddImageNodeButton />
+          <AddBackgroundNodeButton />
+          <Background bgColor={pageBackgroundColor} />
+        </ReactFlow>
       </div>
     </div>
   );
+};
+
+const resolvePageBackgroundColor = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return '#ffffff';
+  }
+
+  const trimmed = value.trim();
+  return /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(trimmed) ? trimmed : '#ffffff';
 };
 
 export default FlowCanvas;

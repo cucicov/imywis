@@ -21,6 +21,7 @@ export type PageNodeData = {
     width?: number;
     height?: number;
     mousePointer?: string;
+    backgroundColor?: string;
     metadata?: NodeMetadata;
 };
 

@@ -57,6 +57,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                     <label style={{ fontSize: '10px', color: '#57212E', whiteSpace: 'nowrap' }}>width(px):</label>
                     <label style={{ fontSize: '10px', color: '#57212E', whiteSpace: 'nowrap' }}>height(px):</label>
                     <label style={{ fontSize: '10px', color: '#57212E', whiteSpace: 'nowrap' }}>mousePointer:</label>
+                    <label style={{ fontSize: '10px', color: '#57212E', whiteSpace: 'nowrap' }}>background:</label>
                 </div>
                 <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '4px'}}>
                     <input
@@ -91,6 +92,14 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                         value={data.mousePointer ?? ''}
                         onChange={onTextChange}
                         style={{ fontSize: '11px', width: '100px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
+                    />
+                    <input
+                        id="field-backgroundColor"
+                        className="nodrag"
+                        type="color"
+                        value={data.backgroundColor ?? '#ffffff'}
+                        onChange={onTextChange}
+                        style={{ width: '40px', height: '22px', border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
                     />
                 </div>
             </div>

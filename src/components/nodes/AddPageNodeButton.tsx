@@ -10,7 +10,8 @@ const AddPageNodeButton = () => {
             name: '',
             width: 100,
             height: 100,
-            mousePointer: ''
+            mousePointer: '',
+            backgroundColor: '#ffffff'
         };
 
         const newNode = {
