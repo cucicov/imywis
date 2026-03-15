@@ -7,7 +7,7 @@ import {
   type Edge,
 } from '@xyflow/react';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import '@xyflow/react/dist/style.css';
 import PageNode from './nodes/PageNode.tsx';
@@ -23,6 +23,7 @@ import P5Background from './P5Background.tsx';
 import ExportP5Project from './ExportP5Project.tsx';
 import BackgroundNode from './nodes/BackgroundNode.tsx';
 import AddBackgroundNodeButton from './nodes/AddBackgroundNodeButton.tsx';
+import {toNumberOrNull} from '../utils/numberUtils.ts';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -45,6 +46,10 @@ const initialEdges: Edge[] = [];
 const FlowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [viewportSize, setViewportSize] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
 
   const onConnect = useCallback(
       (connection: Connection) => {
@@ -57,7 +62,7 @@ const FlowCanvas = () => {
   useEffect(() => {
     setNodes((currentNodes) => {
       const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
-      
+
       // Track all active connections per target node
       const activeConnections = new Map<string, Set<string>>();
       edges.forEach(edge => {
@@ -66,7 +71,7 @@ const FlowCanvas = () => {
         }
         activeConnections.get(edge.target)!.add(`${edge.source}:${edge.sourceHandle}`);
       });
-      
+
       // Update metadata for all nodes
       currentNodes.forEach(node => {
         let updatedNode = node as typeof node;
@@ -95,11 +100,38 @@ const FlowCanvas = () => {
 
         nodeMap.set(node.id, updatedNode);
       });
-      
+
       return Array.from(nodeMap.values());
     });
   }, [edges, setNodes]);
 
+  useEffect(() => {
+    const updateViewportSize = () => {
+      setViewportSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener('resize', updateViewportSize);
+    return () => window.removeEventListener('resize', updateViewportSize);
+  }, []);
+
+  const sceneSize = useMemo(() => {
+    const pageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
+    const pageData = pageNode?.data as PageNodeData | undefined;
+
+    const configuredWidth = toNumberOrNull(pageData?.width);
+    const configuredHeight = toNumberOrNull(pageData?.height);
+
+    const canvasWidth = Math.max(1, configuredWidth ?? viewportSize.width);
+    const canvasHeight = Math.max(1, configuredHeight ?? viewportSize.height);
+
+    return {
+      width: Math.max(canvasWidth, viewportSize.width),
+      height: Math.max(canvasHeight, viewportSize.height),
+    };
+  }, [nodes, viewportSize.height, viewportSize.width]);
 
   // validate node connections based on the node input type
   const isValidConnection = useCallback((connection: Edge | Connection) => {
@@ -127,26 +159,38 @@ const FlowCanvas = () => {
   }, [edges]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative' }}>
-      <P5Background nodes={nodes} />
-      <ExportP5Project nodes={nodes} />
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        isValidConnection={isValidConnection}
-        fitView
-        style={{ position: 'relative', zIndex: 1 }}
+    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}>
+      <div
+        style={{
+          width: `${sceneSize.width}px`,
+          height: `${sceneSize.height}px`,
+          minWidth: '100%',
+          minHeight: '100%',
+          position: 'relative',
+        }}
       >
-        <NodeStateTransfer />
-        <AddPageNodeButton />
-        <AddImageNodeButton />
-        <AddBackgroundNodeButton />
-        <Background/>
-      </ReactFlow>
+        <P5Background nodes={nodes} />
+        <ExportP5Project nodes={nodes} />
+        <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            isValidConnection={isValidConnection}
+            fitView
+            style={{ width: '100%', height: '100%' }}
+          >
+            <NodeStateTransfer />
+            <AddPageNodeButton />
+            <AddImageNodeButton />
+            <AddBackgroundNodeButton />
+            <Background/>
+          </ReactFlow>
+        </div>
+      </div>
     </div>
   );
 };
