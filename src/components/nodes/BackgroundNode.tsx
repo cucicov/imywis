@@ -3,6 +3,7 @@ import {useCallback, useState, type ChangeEvent, type CSSProperties} from 'react
 import {updateNodeAndPropagate} from '../../utils/nodeUtils.ts';
 import {NODE_TYPES, type BackgroundNodeData} from '../../types/nodeTypes';
 import {HandleTypes} from '../../types/handleTypes';
+import {APP_CONFIG} from '../../config/appConfig.ts';
 
 const selectStyle: CSSProperties = {
     fontSize: '11px',
@@ -32,7 +33,7 @@ const checkboxStyle: CSSProperties = {
 
 const BackgroundNode = ({id, data}: NodeProps<Node<BackgroundNodeData, typeof NODE_TYPES.BACKGROUND>>) => {
     const {setNodes, getEdges} = useReactFlow();
-    const [metadataExpanded, setMetadataExpanded] = useState(true);
+    const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
 
     const onFieldChange = useCallback((evt: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const {id: targetId, value} = evt.target;

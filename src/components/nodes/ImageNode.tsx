@@ -3,10 +3,11 @@ import {useCallback, useEffect, useState, type ChangeEvent} from 'react';
 import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
+import {APP_CONFIG} from '../../config/appConfig.ts';
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
-    const [metadataExpanded, setMetadataExpanded] = useState(true);
+    const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const [previewError, setPreviewError] = useState(false);
 
     useEffect(() => {

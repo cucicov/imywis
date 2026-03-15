@@ -3,11 +3,12 @@ import {useCallback, useState, type ChangeEvent} from 'react';
 import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type PageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
+import {APP_CONFIG} from '../../config/appConfig.ts';
 
 
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
-    const [metadataExpanded, setMetadataExpanded] = useState(true);
+    const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const isFirstPage = id === '1';
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
