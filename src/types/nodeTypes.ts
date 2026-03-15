@@ -2,6 +2,7 @@ export const NODE_TYPES = {
     PAGE: 'pageNode',
     IMAGE: 'imageNode',
     BACKGROUND: 'backgroundNode',
+    TEXT: 'textNode',
 } as const;
 
 export type NodeType = typeof NODE_TYPES[keyof typeof NODE_TYPES];
@@ -47,5 +48,23 @@ export type BackgroundNodeData = {
     height?: number;
     autoWidth?: boolean;
     autoHeight?: boolean;
+    metadata?: NodeMetadata;
+};
+
+export type TextNodeData = {
+    label: string;
+    text?: string;
+    font?: string;
+    size?: number;
+    width?: number;
+    height?: number;
+    positionX?: number;
+    positionY?: number;
+    opacity?: number;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+    strikethrough?: boolean;
+    caps?: boolean;
     metadata?: NodeMetadata;
 };

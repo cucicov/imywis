@@ -24,11 +24,14 @@ import ExportP5Project from './ExportP5Project.tsx';
 import BackgroundNode from './nodes/BackgroundNode.tsx';
 import AddBackgroundNodeButton from './nodes/AddBackgroundNodeButton.tsx';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
+import TextNode from './nodes/TextNode.tsx';
+import AddTextNodeButton from './nodes/AddTextNodeButton.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
   imageNode: ImageNode,
   backgroundNode: BackgroundNode,
+  textNode: TextNode,
 };
 
 const initialNodes = [
@@ -143,12 +146,20 @@ const FlowCanvas = () => {
   const isValidConnection = useCallback((connection: Edge | Connection) => {
     const sourceHandle = connection.sourceHandle;
     const targetHandle = connection.targetHandle;
+    const targetNode = nodes.find(node => node.id === connection.target);
 
     const sourceType = sourceHandle?.split('-')[0];
     const targetType = targetHandle?.split('-')[0];
 
     if (sourceType !== targetType) {
       return false;
+    }
+
+    const isTextNodeInput = String(targetNode?.type) === NODE_TYPES.TEXT
+      && (targetType === 'turquoise' || targetType === 'sage');
+
+    if (isTextNodeInput) {
+      return true;
     }
 
     const rules = CONNECTION_RULES[targetType || ''];
@@ -162,7 +173,7 @@ const FlowCanvas = () => {
     }
 
     return true;
-  }, [edges]);
+  }, [edges, nodes]);
 
   return (
     <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}>
@@ -192,6 +203,7 @@ const FlowCanvas = () => {
           <AddPageNodeButton />
           <AddImageNodeButton />
           <AddBackgroundNodeButton />
+          <AddTextNodeButton />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>
       </div>

@@ -1,7 +1,7 @@
 import Sketch from 'react-p5';
 import type p5 from 'react-p5/node_modules/@types/p5';
 import type { Node } from '@xyflow/react';
-import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type NodeMetadata, type PageNodeData} from '../types/nodeTypes';
+import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type NodeMetadata, type PageNodeData, type TextNodeData} from '../types/nodeTypes';
 import {useEffect, useMemo, useRef} from 'react';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
 
@@ -18,10 +18,13 @@ type BackgroundMetadataWithImage = Partial<BackgroundNodeData> & {
   sourceImageData: Partial<ImageNodeData> | null;
 };
 
+type TextMetadata = Partial<TextNodeData>;
+
 const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
   const backgroundMetadataListRef = useRef<BackgroundMetadataWithImage[]>([]);
+  const textMetadataListRef = useRef<TextMetadata[]>([]);
   const sceneBufferRef = useRef<p5.Graphics | null>(null);
   const renderSignatureRef = useRef('');
   const mousePointerRef = useRef<string | null>(null);
@@ -125,11 +128,15 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       const backgroundNodesMetadata = pageData.metadata?.sourceNodes.filter(
         source => source.type === NODE_TYPES.BACKGROUND
       ) || [];
+      const textNodesMetadata = pageData.metadata?.sourceNodes.filter(
+        source => source.type === NODE_TYPES.TEXT
+      ) || [];
       mousePointerRef.current = (pageData.mousePointer ?? (pageData as PageNodeData & {mouse?: string}).mouse)?.trim() || null;
       pageBackgroundColorRef.current = resolvePageBackgroundColor(pageData.backgroundColor);
 
       const newImageMetadataList: ImageMetadataWithImage[] = [];
       const newBackgroundMetadataList: BackgroundMetadataWithImage[] = [];
+      const newTextMetadataList: TextMetadata[] = [];
 
       imageNodesMetadata.forEach(imageNodeMetadata => {
         if (!imageNodeMetadata?.data) {
@@ -190,8 +197,16 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
         });
       });
 
+      textNodesMetadata.forEach(textNodeMetadata => {
+        if (!textNodeMetadata?.data) {
+          return;
+        }
+        newTextMetadataList.push(textNodeMetadata.data as TextMetadata);
+      });
+
       imageMetadataListRef.current = newImageMetadataList;
       backgroundMetadataListRef.current = newBackgroundMetadataList;
+      textMetadataListRef.current = newTextMetadataList;
       const hasLivePreview = isGifPath(mousePointerRef.current)
         || newImageMetadataList.some(image => isGifPath(image.path))
         || newBackgroundMetadataList.some(background => isGifPath(background.sourceImageData?.path));
@@ -216,6 +231,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     } else {
       imageMetadataListRef.current = [];
       backgroundMetadataListRef.current = [];
+      textMetadataListRef.current = [];
       pageBackgroundColorRef.current = '#ffffff';
       hasLivePreviewRef.current = false;
       if (p5InstanceRef.current) {
@@ -340,6 +356,40 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       target.image(imageData.loadedImage, positionX, positionY, width, height);
       target.pop();
     });
+
+    textMetadataListRef.current.forEach(textData => {
+      const rawText = typeof textData.text === 'string' ? textData.text : '';
+      if (!rawText.trim()) {
+        return;
+      }
+
+      const textValue = toBoolean(textData.caps) ? rawText.toUpperCase() : rawText;
+      const size = Math.max(1, toNumberOrNull(textData.size) ?? 16);
+      const width = Math.max(0, toNumberOrNull(textData.width) ?? 250);
+      const height = Math.max(0, toNumberOrNull(textData.height) ?? 120);
+      if (width <= 0 || height <= 0) {
+        return;
+      }
+
+      const positionX = toNumberOrNull(textData.positionX) ?? 0;
+      const positionY = toNumberOrNull(textData.positionY) ?? 0;
+      const opacity = clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1);
+
+      drawTextWithDecorations(target, p5Instance, {
+        text: textValue,
+        font: typeof textData.font === 'string' && textData.font.trim() ? textData.font : 'sans-serif',
+        size,
+        x: positionX,
+        y: positionY,
+        width,
+        height,
+        opacity,
+        bold: toBoolean(textData.bold),
+        italic: toBoolean(textData.italic),
+        underline: toBoolean(textData.underline),
+        strikethrough: toBoolean(textData.strikethrough),
+      });
+    });
   };
 
   const draw = (p5Instance: p5) => {
@@ -355,7 +405,8 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       p5Instance.height,
       pageBackgroundColorRef.current,
       backgroundMetadataListRef.current,
-      imageMetadataListRef.current
+      imageMetadataListRef.current,
+      textMetadataListRef.current
     );
 
     if (!sceneBufferRef.current || renderSignatureRef.current !== signature) {
@@ -435,7 +486,8 @@ const createRenderSignature = (
   canvasHeight: number,
   pageBackgroundColor: string,
   backgrounds: BackgroundMetadataWithImage[],
-  images: ImageMetadataWithImage[]
+  images: ImageMetadataWithImage[],
+  texts: TextMetadata[]
 ) => {
   const backgroundSignature = backgrounds.map(item => ({
     style: item.style ?? 'tile',
@@ -461,14 +513,132 @@ const createRenderSignature = (
     loadedImageHeight: item.loadedImage?.height ?? 0,
   }));
 
+  const textSignature = texts.map(item => ({
+    text: item.text ?? '',
+    font: item.font ?? 'sans-serif',
+    size: item.size ?? null,
+    width: item.width ?? null,
+    height: item.height ?? null,
+    positionX: item.positionX ?? null,
+    positionY: item.positionY ?? null,
+    opacity: item.opacity ?? null,
+    bold: item.bold ?? false,
+    italic: item.italic ?? false,
+    underline: item.underline ?? false,
+    strikethrough: item.strikethrough ?? false,
+    caps: item.caps ?? false,
+  }));
+
   return JSON.stringify({
     canvasWidth,
     canvasHeight,
     pageBackgroundColor,
     backgrounds: backgroundSignature,
     images: imageSignature,
+    texts: textSignature,
   });
 };
+
+const drawTextWithDecorations = (
+  target: p5 | p5.Graphics,
+  p5Instance: p5,
+  options: {
+    text: string;
+    font: string;
+    size: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    opacity: number;
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    strikethrough: boolean;
+  }
+) => {
+  const {text, font, size, x, y, width, height, opacity, bold, italic, underline, strikethrough} = options;
+
+  target.push();
+  target.textFont(font);
+  target.textSize(size);
+  target.textAlign(p5Instance.LEFT, p5Instance.TOP);
+
+  if (bold && italic) {
+    target.textStyle(p5Instance.BOLDITALIC);
+  } else if (bold) {
+    target.textStyle(p5Instance.BOLD);
+  } else if (italic) {
+    target.textStyle(p5Instance.ITALIC);
+  } else {
+    target.textStyle(p5Instance.NORMAL);
+  }
+
+  const alpha = clamp(Math.round(opacity * 255), 0, 255);
+  target.noStroke();
+  target.fill(0, alpha);
+
+  const lines = wrapTextLines(target, text, width);
+  const lineHeight = size * 1.2;
+  const maxLines = Math.max(1, Math.floor(height / lineHeight));
+
+  for (let index = 0; index < Math.min(lines.length, maxLines); index += 1) {
+    const line = lines[index];
+    const lineX = x;
+    const lineY = y + (index * lineHeight);
+    target.text(line, lineX, lineY);
+
+    const lineWidth = target.textWidth(line);
+    if (underline || strikethrough) {
+      target.push();
+      target.stroke(0, alpha);
+      target.strokeWeight(Math.max(1, size * 0.06));
+      if (underline) {
+        target.line(lineX, lineY + size * 1.05, lineX + lineWidth, lineY + size * 1.05);
+      }
+      if (strikethrough) {
+        target.line(lineX, lineY + size * 0.55, lineX + lineWidth, lineY + size * 0.55);
+      }
+      target.pop();
+    }
+  }
+
+  target.pop();
+};
+
+const wrapTextLines = (target: p5 | p5.Graphics, text: string, maxWidth: number) => {
+  const paragraphs = text.split('\n');
+  const lines: string[] = [];
+
+  paragraphs.forEach(paragraph => {
+    if (!paragraph.trim()) {
+      lines.push('');
+      return;
+    }
+
+    const words = paragraph.split(/\s+/);
+    let currentLine = '';
+
+    words.forEach(word => {
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (target.textWidth(candidate) <= maxWidth || !currentLine) {
+        currentLine = candidate;
+        return;
+      }
+
+      lines.push(currentLine);
+      currentLine = word;
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+  });
+
+  return lines;
+};
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const resolvePageBackgroundColor = (value: unknown) => {
   if (typeof value !== 'string') {
