@@ -2,8 +2,13 @@ import Sketch from 'react-p5';
 import type p5 from 'react-p5/node_modules/@types/p5';
 import type { Node } from '@xyflow/react';
 import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type NodeMetadata, type PageNodeData, type TextNodeData} from '../types/nodeTypes';
-import {useEffect, useMemo, useRef} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
+import {
+  DEFAULT_LATEST_SELECTED_PAGE_NAME,
+  getLatestSelectedPageNameFromSession,
+  LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT,
+} from '../utils/sessionStorage.ts';
 
 type P5BackgroundProps = {
   nodes: Node[];
@@ -33,11 +38,28 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const imageCacheRef = useRef<Map<string, p5.Image>>(new Map());
   const lastRedrawAtRef = useRef(0);
   const pendingRedrawTimerRef = useRef<number | null>(null);
+  const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
 
   const pageNodeData = useMemo(() => {
-    const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
-    return firstPageNode?.data as PageNodeData | undefined;
-  }, [nodes]);
+    const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
+    if (pageNodes.length === 0) {
+      return undefined;
+    }
+
+    const selectedName = latestSelectedPageName.trim();
+    if (selectedName && selectedName !== DEFAULT_LATEST_SELECTED_PAGE_NAME) {
+      const matchingPageNode = pageNodes.find((node) => {
+        const pageData = node.data as PageNodeData | undefined;
+        return (pageData?.name ?? '').trim() === selectedName;
+      });
+
+      if (matchingPageNode) {
+        return matchingPageNode.data as PageNodeData;
+      }
+    }
+
+    return pageNodes[0].data as PageNodeData;
+  }, [latestSelectedPageName, nodes]);
 
   const pageContentSignature = useMemo(() => {
     if (!pageNodeData) {
@@ -62,18 +84,41 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     });
   }, [pageNodeData]);
 
-  const getPageDimensions = () => {
-    const firstPageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
-    const pageData = firstPageNode?.data as PageNodeData | undefined;
-    const width = toNumberOrNull(pageData?.width);
-    const height = toNumberOrNull(pageData?.height);
+  const getPageDimensions = useCallback(() => {
+    const width = toNumberOrNull(pageNodeData?.width);
+    const height = toNumberOrNull(pageNodeData?.height);
 
     if (width !== null && height !== null) {
       return { width, height };
     }
 
     return null;
-  };
+  }, [pageNodeData]);
+
+  useEffect(() => {
+    const syncLatestSelectedPageName = () => {
+      setLatestSelectedPageName(getLatestSelectedPageNameFromSession());
+    };
+
+    const onLatestSelectedPageNameChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      const pageName = customEvent.detail;
+
+      if (typeof pageName === 'string' && pageName.trim()) {
+        setLatestSelectedPageName(pageName);
+        return;
+      }
+
+      syncLatestSelectedPageName();
+    };
+
+    window.addEventListener(LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT, onLatestSelectedPageNameChanged);
+    window.addEventListener('storage', syncLatestSelectedPageName);
+    return () => {
+      window.removeEventListener(LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT, onLatestSelectedPageNameChanged);
+      window.removeEventListener('storage', syncLatestSelectedPageName);
+    };
+  }, []);
 
   const loadCursorImage = (p5Instance: p5, mousePointer: string | null) => {
     if (!mousePointer) {
@@ -267,7 +312,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }
 
     requestRedraw();
-  }, [pageDimensionSignature]);
+  }, [getPageDimensions, pageDimensionSignature]);
 
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
     const dimensions = getPageDimensions();
