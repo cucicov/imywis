@@ -1,5 +1,5 @@
 import {useReactFlow} from '@xyflow/react';
-import {NODE_TYPES, type TextNodeData} from '../../types/nodeTypes.ts';
+import {NODE_TYPES, type TextNodeData} from '../../../types/nodeTypes.ts';
 
 const AddTextNodeButton = () => {
     const {setNodes, getNodes} = useReactFlow();

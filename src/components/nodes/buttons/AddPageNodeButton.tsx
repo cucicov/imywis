@@ -1,25 +1,22 @@
 import {useReactFlow} from "@xyflow/react";
-import {type ImageNodeData, NODE_TYPES} from "../../types/nodeTypes.ts";
+import {NODE_TYPES, type PageNodeData} from "../../../types/nodeTypes.ts";
 
 const AddPageNodeButton = () => {
     const { setNodes, getNodes } = useReactFlow();
 
     const addNode = () => {
-        const data: ImageNodeData = {
-            label: NODE_TYPES.IMAGE,
-            path: '',
+        const data: PageNodeData = {
+            label: NODE_TYPES.PAGE,
+            name: '',
             width: 100,
             height: 100,
-            autoWidth: false,
-            autoHeight: false,
-            positionX: 0,
-            positionY: 0,
-            opacity: 1
+            mousePointer: '',
+            backgroundColor: '#ffffff'
         };
 
         const newNode = {
-            id: `${Math.max(...getNodes().map(item => Number(item.id))) + 1}`,
-            type: 'imageNode',
+            id: `${getNodes().length + 1}`,
+            type: 'pageNode',
             data,
             position: { x: Math.random() * 400, y: Math.random() * 400 },
         };
@@ -31,7 +28,7 @@ const AddPageNodeButton = () => {
             onClick={addNode}
             style={{
                 position: 'absolute',
-                top: '60px',
+                top: '10px',
                 left: '10px',
                 zIndex: 10,
                 padding: '10px 20px',
@@ -43,7 +40,7 @@ const AddPageNodeButton = () => {
                 fontSize: '14px',
             }}
         >
-            Add Image Node
+            Add Page Node
         </button>
     );
 };

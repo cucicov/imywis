@@ -62,7 +62,7 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
             <Handle
                 type="target"
                 position={Position.Top}
-                id="turquoise-text-input"
+                id={HandleTypes.TURQUOISE_INPUT}
                 style={{
                     left: '25%',
                     width: '10px',
@@ -74,7 +74,7 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
             <Handle
                 type="target"
                 position={Position.Top}
-                id="sage-text-input"
+                id={HandleTypes.SAGE_INPUT}
                 style={{
                     left: '50%',
                     width: '10px',
@@ -86,25 +86,25 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
             <Handle
                 type="source"
                 position={Position.Top}
-                id="orange-top-output"
+                id={HandleTypes.ORANGE_OUTPUT_2}
                 style={{
                     left: '75%',
                     width: '10px',
                     height: '10px',
                     backgroundColor: '#FBB38D',
-                    border: '1px solid black',
+                    border: '1px solid white',
                 }}
             />
             <Handle
                 type="source"
                 position={Position.Bottom}
-                id="orange-bottom-output"
+                id={HandleTypes.ORANGE_OUTPUT}
                 style={{
                     left: '33%',
                     width: '10px',
                     height: '10px',
                     backgroundColor: '#FBB38D',
-                    border: '1px solid black',
+                    border: '1px solid white',
                 }}
             />
             <Handle
@@ -116,7 +116,7 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                     width: '10px',
                     height: '10px',
                     backgroundColor: '#D05774',
-                    border: '1px solid black',
+                    border: '1px solid white',
                 }}
             />
 

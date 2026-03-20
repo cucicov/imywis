@@ -11,8 +11,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import '@xyflow/react/dist/style.css';
 import PageNode from './nodes/PageNode.tsx';
-import AddPageNodeButton from './nodes/AddPageNodeButton.tsx';
-import AddImageNodeButton from "./nodes/AddImageNodeButton.tsx";
+import AddPageNodeButton from './nodes/buttons/AddPageNodeButton.tsx';
+import AddImageNodeButton from "./nodes/buttons/AddImageNodeButton.tsx";
 import ImageNode from "./nodes/ImageNode.tsx";
 import NodeStateTransfer from "./nodes/NodeStateTransfer.tsx";
 import type {PageNodeData} from "../types/nodeTypes.ts";
@@ -22,10 +22,10 @@ import {CONNECTION_RULES} from "../types/handleTypes.ts";
 import P5Preview from './P5Preview.tsx';
 import ExportP5Project from './ExportP5Project.tsx';
 import BackgroundNode from './nodes/BackgroundNode.tsx';
-import AddBackgroundNodeButton from './nodes/AddBackgroundNodeButton.tsx';
+import AddBackgroundNodeButton from './nodes/buttons/AddBackgroundNodeButton.tsx';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
 import TextNode from './nodes/TextNode.tsx';
-import AddTextNodeButton from './nodes/AddTextNodeButton.tsx';
+import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,

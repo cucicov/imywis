@@ -1,5 +1,5 @@
 import {useReactFlow} from '@xyflow/react';
-import {NODE_TYPES, type BackgroundNodeData} from '../../types/nodeTypes.ts';
+import {NODE_TYPES, type BackgroundNodeData} from '../../../types/nodeTypes.ts';
 
 const AddBackgroundNodeButton = () => {
     const {setNodes, getNodes} = useReactFlow();
