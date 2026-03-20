@@ -5,6 +5,7 @@ import {
   addEdge,
   type Connection,
   type Edge,
+  type Node,
 } from '@xyflow/react';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -26,6 +27,11 @@ import AddBackgroundNodeButton from './nodes/buttons/AddBackgroundNodeButton.tsx
 import {toNumberOrNull} from '../utils/numberUtils.ts';
 import TextNode from './nodes/TextNode.tsx';
 import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
+import LatestSelectedPageNameBadge from './nodes/buttons/LatestSelectedPageNameBadge.tsx';
+import {
+  getLatestSelectedPageNameFromSession,
+  setLatestSelectedPageNameInSession,
+} from '../utils/sessionStorage.ts';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -49,10 +55,33 @@ const initialEdges: Edge[] = [];
 const FlowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const [viewportSize, setViewportSize] = useState(() => ({
     width: window.innerWidth,
     height: window.innerHeight,
   }));
+
+  const persistSelectedPageNode = useCallback((node: Node) => {
+    if (node.type !== NODE_TYPES.PAGE) {
+      return;
+    }
+
+    const pageData = node.data as PageNodeData | undefined;
+    const nextPageName = resolveSelectedPageName(pageData?.name);
+    setLatestSelectedPageName(nextPageName);
+    setLatestSelectedPageNameInSession(nextPageName);
+  }, []);
+
+  const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node[] }) => {
+    const selectedPageNode = selectedNodes.find((node) => node.type === NODE_TYPES.PAGE);
+    if (selectedPageNode) {
+      persistSelectedPageNode(selectedPageNode);
+    }
+  }, [persistSelectedPageNode]);
+
+  const onNodeClick = useCallback((_: unknown, node: Node) => {
+    persistSelectedPageNode(node);
+  }, [persistSelectedPageNode]);
 
   const onConnect = useCallback(
       (connection: Connection) => {
@@ -192,6 +221,8 @@ const FlowCanvas = () => {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onSelectionChange={onSelectionChange}
+          onNodeClick={onNodeClick}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           isValidConnection={isValidConnection}
@@ -204,6 +235,7 @@ const FlowCanvas = () => {
           <AddImageNodeButton />
           <AddBackgroundNodeButton />
           <AddTextNodeButton />
+          <LatestSelectedPageNameBadge pageName={latestSelectedPageName} />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>
       </div>
@@ -218,6 +250,15 @@ const resolvePageBackgroundColor = (value: unknown) => {
 
   const trimmed = value.trim();
   return /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(trimmed) ? trimmed : '#ffffff';
+};
+
+const resolveSelectedPageName = (value: unknown) => {
+  if (typeof value !== 'string') {
+    return 'Unnamed page';
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : 'Unnamed page';
 };
 
 export default FlowCanvas;
