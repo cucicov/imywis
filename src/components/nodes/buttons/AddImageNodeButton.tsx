@@ -1,8 +1,9 @@
-import {useReactFlow} from "@xyflow/react";
+import {useReactFlow, useStoreApi} from "@xyflow/react";
 import {type ImageNodeData, NODE_TYPES} from "../../../types/nodeTypes.ts";
 
 const AddPageNodeButton = () => {
     const { setNodes, getNodes } = useReactFlow();
+    const store = useStoreApi();
 
     const addNode = () => {
         const data: ImageNodeData = {
@@ -16,12 +17,18 @@ const AddPageNodeButton = () => {
             positionY: 0,
             opacity: 1
         };
+        const { width, height, transform } = store.getState();
+        const [translateX, translateY, zoom] = transform;
+        const centerPosition = {
+            x: (width / 2 - translateX) / zoom,
+            y: (height / 2 - translateY) / zoom,
+        };
 
         const newNode = {
             id: `${Math.max(...getNodes().map(item => Number(item.id))) + 1}`,
             type: 'imageNode',
             data,
-            position: { x: Math.random() * 400, y: Math.random() * 400 },
+            position: centerPosition,
         };
         setNodes((nodes) => [...nodes, newNode]);
     };

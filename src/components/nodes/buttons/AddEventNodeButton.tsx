@@ -1,8 +1,9 @@
-import {useReactFlow} from '@xyflow/react';
+import {useReactFlow, useStoreApi} from '@xyflow/react';
 import {NODE_TYPES, type EventNodeData} from '../../../types/nodeTypes.ts';
 
 const AddEventNodeButton = () => {
     const {setNodes, getNodes} = useReactFlow();
+    const store = useStoreApi();
 
     const addNode = () => {
         const data: EventNodeData = {
@@ -12,12 +13,18 @@ const AddEventNodeButton = () => {
 
         const currentNodes = getNodes();
         const maxId = currentNodes.length > 0 ? Math.max(...currentNodes.map(item => Number(item.id) || 0)) : 0;
+        const {width, height, transform} = store.getState();
+        const [translateX, translateY, zoom] = transform;
+        const centerPosition = {
+            x: (width / 2 - translateX) / zoom,
+            y: (height / 2 - translateY) / zoom,
+        };
 
         const newNode = {
             id: `${maxId + 1}`,
             type: NODE_TYPES.EVENT,
             data,
-            position: {x: Math.random() * 400, y: Math.random() * 400},
+            position: centerPosition,
         };
 
         setNodes((nodes) => [...nodes, newNode]);
