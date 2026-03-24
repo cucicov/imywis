@@ -88,12 +88,20 @@ export const syncNodeDataFromSource = (
 
     const metadata: NodeMetadata = (targetNode.data.metadata as NodeMetadata) || { sourceNodes: [] };
     const sourceData = sourceNode.data as Record<string, unknown>;
-    // Background nodes need the full upstream image payload in metadata.
-    // Other nodes keep the previous reduced shape without duplicating source labels.
-    const dataToStore = targetNode.type === NODE_TYPES.BACKGROUND
-        ? sourceData
+    const isPageToEventConnection =
+        sourceNode.type === NODE_TYPES.PAGE && targetNode.type === NODE_TYPES.EVENT;
+
+    // Special case: event nodes connected from page nodes keep the full page payload,
+    // but without nested metadata to avoid recursive metadata growth.
+    const dataToStore = isPageToEventConnection
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        : (({label, ...rest}) => rest)(sourceData);
+        ? (({metadata, ...rest}) => rest)(sourceData)
+        : targetNode.type === NODE_TYPES.BACKGROUND
+            ? sourceData
+            // Background nodes need the full upstream image payload in metadata.
+            // Other nodes keep the previous reduced shape without duplicating source labels.
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            : (({label, ...rest}) => rest)(sourceData);
 
     // Check if this source already exists
     const existingIndex = metadata.sourceNodes.findIndex(
