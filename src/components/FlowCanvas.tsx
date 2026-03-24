@@ -27,6 +27,8 @@ import AddBackgroundNodeButton from './nodes/buttons/AddBackgroundNodeButton.tsx
 import {toNumberOrNull} from '../utils/numberUtils.ts';
 import TextNode from './nodes/TextNode.tsx';
 import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
+import EventNode from './nodes/EventNode.tsx';
+import AddEventNodeButton from './nodes/buttons/AddEventNodeButton.tsx';
 import LatestSelectedPageNameBadge from './nodes/buttons/LatestSelectedPageNameBadge.tsx';
 import {
   getLatestSelectedPageNameFromSession,
@@ -38,6 +40,7 @@ const nodeTypes = {
   imageNode: ImageNode,
   backgroundNode: BackgroundNode,
   textNode: TextNode,
+  eventNode: EventNode,
 };
 
 const initialNodes = [
@@ -235,6 +238,7 @@ const FlowCanvas = () => {
           <AddImageNodeButton />
           <AddBackgroundNodeButton />
           <AddTextNodeButton />
+          <AddEventNodeButton />
           <LatestSelectedPageNameBadge pageName={latestSelectedPageName} />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>

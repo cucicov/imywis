@@ -3,6 +3,7 @@ export const NODE_TYPES = {
     IMAGE: 'imageNode',
     BACKGROUND: 'backgroundNode',
     TEXT: 'textNode',
+    EVENT: 'eventNode',
 } as const;
 
 export type NodeType = typeof NODE_TYPES[keyof typeof NODE_TYPES];
@@ -66,5 +67,13 @@ export type TextNodeData = {
     underline?: boolean;
     strikethrough?: boolean;
     caps?: boolean;
+    metadata?: NodeMetadata;
+};
+
+export type EventType = 'click' | 'mouse over';
+
+export type EventNodeData = {
+    label: string;
+    type?: EventType;
     metadata?: NodeMetadata;
 };

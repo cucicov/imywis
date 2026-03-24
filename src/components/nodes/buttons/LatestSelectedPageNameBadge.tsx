@@ -7,8 +7,8 @@ const LatestSelectedPageNameBadge = ({ pageName }: LatestSelectedPageNameBadgePr
     <div
       style={{
         position: 'absolute',
-        top: '210px',
-        left: '10px',
+        top: '10px',
+        left: '180px',
         zIndex: 10,
         padding: '8px 12px',
         backgroundColor: '#f5f2e9',
