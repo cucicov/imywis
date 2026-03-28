@@ -17,8 +17,12 @@ export type NodeMetadata = {
     }>;
 };
 
-export type PageNodeData = {
+type BaseNodeData = {
     label: string;
+    connectionImpactKey?: number;
+};
+
+export type PageNodeData = BaseNodeData & {
     name?: string;
     width?: number;
     height?: number;
@@ -27,8 +31,7 @@ export type PageNodeData = {
     metadata?: NodeMetadata;
 };
 
-export type ImageNodeData = {
-    label: string;
+export type ImageNodeData = BaseNodeData & {
     path?: string;
     width?: number;
     height?: number;
@@ -42,8 +45,7 @@ export type ImageNodeData = {
 
 export type BackgroundStyle = 'tile' | 'fullscreen' | 'stretch' | 'contain';
 
-export type BackgroundNodeData = {
-    label: string;
+export type BackgroundNodeData = BaseNodeData & {
     style?: BackgroundStyle;
     width?: number;
     height?: number;
@@ -52,8 +54,7 @@ export type BackgroundNodeData = {
     metadata?: NodeMetadata;
 };
 
-export type TextNodeData = {
-    label: string;
+export type TextNodeData = BaseNodeData & {
     text?: string;
     font?: string;
     size?: number;
@@ -72,8 +73,7 @@ export type TextNodeData = {
 
 export type EventType = 'click' | 'mouse over';
 
-export type EventNodeData = {
-    label: string;
+export type EventNodeData = BaseNodeData & {
     type?: EventType;
     metadata?: NodeMetadata;
 };

@@ -47,7 +47,9 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
     }, [getEdges, id, setNodes]);
 
     return (
-        <div style={{
+        <div
+            className={`imywis-node-shell${data.connectionImpactKey ? ' imywis-node-shell--impact' : ''}`}
+            style={{
             padding: '10px',
             borderRadius: '15px',
             background: '#6BC8CD',

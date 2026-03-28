@@ -8,7 +8,7 @@ import {
   type Node,
 } from '@xyflow/react';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import '@xyflow/react/dist/style.css';
 import PageNode from './nodes/PageNode.tsx';
@@ -59,6 +59,7 @@ const FlowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
+  const previousMetadataSignatureByNodeIdRef = useRef<Map<string, string>>(new Map());
   const [viewportSize, setViewportSize] = useState(() => ({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -88,6 +89,13 @@ const FlowCanvas = () => {
 
   const onConnect = useCallback(
       (connection: Connection) => {
+        const sourceId = connection.source;
+        const targetId = connection.target;
+
+        if (!sourceId || !targetId) {
+          return;
+        }
+
         setEdges((eds) => addEdge(connection, eds));
       },
       [setEdges]
@@ -139,6 +147,65 @@ const FlowCanvas = () => {
       return Array.from(nodeMap.values());
     });
   }, [edges, setNodes]);
+
+  // Trigger impact animation whenever a node metadata payload changes
+  useEffect(() => {
+    const currentSignatures = new Map<string, string>();
+    const impactedNodeIds: string[] = [];
+
+    nodes.forEach((node) => {
+      const metadataSignature = JSON.stringify(node.data.metadata?.sourceNodes ?? []);
+      currentSignatures.set(node.id, metadataSignature);
+
+      const previousSignature = previousMetadataSignatureByNodeIdRef.current.get(node.id);
+      if (typeof previousSignature === 'string' && previousSignature !== metadataSignature) {
+        impactedNodeIds.push(node.id);
+      }
+    });
+
+    previousMetadataSignatureByNodeIdRef.current = currentSignatures;
+
+    if (impactedNodeIds.length === 0) {
+      return;
+    }
+
+    const impactKey = Date.now();
+    const impactedNodeIdSet = new Set(impactedNodeIds);
+
+    setNodes((currentNodes) => currentNodes.map((node) => {
+      if (!impactedNodeIdSet.has(node.id)) {
+        return node;
+      }
+
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          connectionImpactKey: impactKey,
+        },
+      };
+    }));
+
+    window.setTimeout(() => {
+      setNodes((currentNodes) => currentNodes.map((node) => {
+        if (!impactedNodeIdSet.has(node.id)) {
+          return node;
+        }
+
+        if (node.data.connectionImpactKey !== impactKey) {
+          return node;
+        }
+
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            connectionImpactKey: undefined,
+          },
+        };
+      }));
+    }, 520);
+  }, [nodes, setNodes]);
 
   useEffect(() => {
     const updateViewportSize = () => {

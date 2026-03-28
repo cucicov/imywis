@@ -24,7 +24,9 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
     }, [getEdges, id, setNodes]);
 
     return (
-        <div style={{
+        <div
+            className={`imywis-node-shell${data.connectionImpactKey ? ' imywis-node-shell--impact' : ''}`}
+            style={{
             padding: '10px',
             borderRadius: '15px',
             background: '#FBB38D',

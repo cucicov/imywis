@@ -50,7 +50,9 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
     }, [getEdges, id, setNodes]);
 
     return (
-        <div style={{
+        <div
+            className={`imywis-node-shell${data.connectionImpactKey ? ' imywis-node-shell--impact' : ''}`}
+            style={{
             padding: '10px',
             borderRadius: '15px',
             background: '#FBB38D',

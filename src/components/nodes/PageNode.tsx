@@ -21,7 +21,9 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
     }, [getEdges, id, setNodes]);
 
     return (
-        <div style={{
+        <div
+            className={`imywis-node-shell${data.connectionImpactKey ? ' imywis-node-shell--impact' : ''}`}
+            style={{
             padding: '10px',
             borderRadius: '15px',
             background: '#D05774',
