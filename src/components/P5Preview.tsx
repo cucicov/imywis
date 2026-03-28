@@ -25,6 +25,14 @@ type BackgroundMetadataWithImage = Partial<BackgroundNodeData> & {
 
 type TextMetadata = Partial<TextNodeData>;
 
+type DrawTask = (target: p5 | p5.Graphics, p5Instance: p5) => void;
+
+type ProgressiveRenderState = {
+  signature: string;
+  tasks: DrawTask[];
+  taskIndex: number;
+};
+
 const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
@@ -38,9 +46,16 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const imageCacheRef = useRef<Map<string, p5.Image>>(new Map());
   const lastRedrawAtRef = useRef(0);
   const pendingRedrawTimerRef = useRef<number | null>(null);
+  const previewLoadTokenRef = useRef(0);
+  const pendingAssetLoadsRef = useRef(0);
+  const hasDrawnForCurrentLoadRef = useRef(false);
+  const isPreviewLoadingRef = useRef(true);
+  const progressiveRenderRef = useRef<ProgressiveRenderState | null>(null);
+  const tilePatternCanvasCacheRef = useRef<WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>>(new WeakMap());
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
+  const [isPreviewLoading, setIsPreviewLoading] = useState(true);
 
-  const pageNodeData = useMemo(() => {
+  const selectedPageNode = useMemo(() => {
     const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
     if (pageNodes.length === 0) {
       return undefined;
@@ -54,35 +69,14 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       });
 
       if (matchingPageNode) {
-        return matchingPageNode.data as PageNodeData;
+        return matchingPageNode;
       }
     }
 
-    return pageNodes[0].data as PageNodeData;
+    return pageNodes[0];
   }, [latestSelectedPageName, nodes]);
-
-  const pageContentSignature = useMemo(() => {
-    if (!pageNodeData) {
-      return 'no-page-data';
-    }
-    return JSON.stringify({
-      width: pageNodeData.width ?? null,
-      height: pageNodeData.height ?? null,
-      mousePointer: (pageNodeData.mousePointer ?? (pageNodeData as PageNodeData & {mouse?: string}).mouse ?? '').trim(),
-      backgroundColor: pageNodeData.backgroundColor ?? '#ffffff',
-      metadata: pageNodeData.metadata?.sourceNodes ?? [],
-    });
-  }, [pageNodeData]);
-
-  const pageDimensionSignature = useMemo(() => {
-    if (!pageNodeData) {
-      return 'no-page-dimensions';
-    }
-    return JSON.stringify({
-      width: pageNodeData.width ?? null,
-      height: pageNodeData.height ?? null,
-    });
-  }, [pageNodeData]);
+  const pageNodeData = selectedPageNode?.data as PageNodeData | undefined;
+  const selectedPageNodeId = selectedPageNode?.id ?? null;
 
   const getPageDimensions = useCallback(() => {
     const width = toNumberOrNull(pageNodeData?.width);
@@ -94,6 +88,14 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
 
     return null;
   }, [pageNodeData]);
+
+  const setPreviewLoadingState = useCallback((nextValue: boolean) => {
+    if (isPreviewLoadingRef.current === nextValue) {
+      return;
+    }
+    isPreviewLoadingRef.current = nextValue;
+    setIsPreviewLoading(nextValue);
+  }, []);
 
   useEffect(() => {
     const syncLatestSelectedPageName = () => {
@@ -164,8 +166,36 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }, minIntervalMs - elapsed);
   };
 
+  const maybeCompletePreviewLoad = useCallback((token: number) => {
+    if (token !== previewLoadTokenRef.current) {
+      return;
+    }
+
+    if (pendingAssetLoadsRef.current === 0
+      && hasDrawnForCurrentLoadRef.current
+      && progressiveRenderRef.current === null) {
+      setPreviewLoadingState(false);
+    }
+  }, [setPreviewLoadingState]);
+
+  const beginPreviewLoad = useCallback(() => {
+    previewLoadTokenRef.current += 1;
+    pendingAssetLoadsRef.current = 0;
+    hasDrawnForCurrentLoadRef.current = false;
+    lastRedrawAtRef.current = 0;
+    progressiveRenderRef.current = null;
+    renderSignatureRef.current = '';
+    setPreviewLoadingState(true);
+  }, [setPreviewLoadingState]);
+
+  useEffect(() => {
+    beginPreviewLoad();
+  }, [beginPreviewLoad, selectedPageNodeId]);
+
   useEffect(() => {
     if (pageNodeData && p5InstanceRef.current) {
+      const hydrateStart = performance.now();
+      const currentLoadToken = previewLoadTokenRef.current;
       const pageData = pageNodeData;
       const imageNodesMetadata = pageData.metadata?.sourceNodes.filter(
         source => source.type === NODE_TYPES.IMAGE
@@ -197,9 +227,22 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
           if (cachedImage) {
             loadedImage = cachedImage;
           } else {
+            pendingAssetLoadsRef.current += 1;
             loadedImage = p5InstanceRef.current.loadImage(imagePath, (img) => {
+              if (currentLoadToken !== previewLoadTokenRef.current) {
+                return;
+              }
               imageCacheRef.current.set(imagePath, img);
+              pendingAssetLoadsRef.current = Math.max(0, pendingAssetLoadsRef.current - 1);
               requestRedraw();
+              maybeCompletePreviewLoad(currentLoadToken);
+            }, () => {
+              if (currentLoadToken !== previewLoadTokenRef.current) {
+                return;
+              }
+              pendingAssetLoadsRef.current = Math.max(0, pendingAssetLoadsRef.current - 1);
+              requestRedraw();
+              maybeCompletePreviewLoad(currentLoadToken);
             });
           }
         }
@@ -228,9 +271,22 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
           if (cachedImage) {
             loadedImage = cachedImage;
           } else {
+            pendingAssetLoadsRef.current += 1;
             loadedImage = p5InstanceRef.current.loadImage(imagePath, (img) => {
+              if (currentLoadToken !== previewLoadTokenRef.current) {
+                return;
+              }
               imageCacheRef.current.set(imagePath, img);
+              pendingAssetLoadsRef.current = Math.max(0, pendingAssetLoadsRef.current - 1);
               requestRedraw();
+              maybeCompletePreviewLoad(currentLoadToken);
+            }, () => {
+              if (currentLoadToken !== previewLoadTokenRef.current) {
+                return;
+              }
+              pendingAssetLoadsRef.current = Math.max(0, pendingAssetLoadsRef.current - 1);
+              requestRedraw();
+              maybeCompletePreviewLoad(currentLoadToken);
             });
           }
         }
@@ -273,6 +329,13 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
         p5InstanceRef.current.noLoop();
         requestRedraw();
       }
+      logPreviewTiming('hydrate-page-metadata', hydrateStart, {
+        imageSources: imageNodesMetadata.length,
+        backgroundSources: backgroundNodesMetadata.length,
+        textSources: textNodesMetadata.length,
+        pendingAssetLoads: pendingAssetLoadsRef.current,
+      });
+      maybeCompletePreviewLoad(currentLoadToken);
     } else {
       imageMetadataListRef.current = [];
       backgroundMetadataListRef.current = [];
@@ -284,8 +347,9 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
         p5InstanceRef.current.noLoop();
         requestRedraw();
       }
+      maybeCompletePreviewLoad(previewLoadTokenRef.current);
     }
-  }, [pageContentSignature, pageNodeData]);
+  }, [maybeCompletePreviewLoad, pageNodeData]);
 
   useEffect(() => {
     return () => {
@@ -295,6 +359,8 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       }
       sceneBufferRef.current?.remove();
       sceneBufferRef.current = null;
+      progressiveRenderRef.current = null;
+      tilePatternCanvasCacheRef.current = new WeakMap();
     };
   }, []);
 
@@ -312,7 +378,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }
 
     requestRedraw();
-  }, [getPageDimensions, pageDimensionSignature]);
+  }, [getPageDimensions, pageNodeData?.width, pageNodeData?.height]);
 
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
     const dimensions = getPageDimensions();
@@ -336,115 +402,27 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }
   };
 
-  const renderScene = (target: p5 | p5.Graphics, p5Instance: p5) => {
-    target.background(pageBackgroundColorRef.current);
-
-    backgroundMetadataListRef.current.forEach(backgroundData => {
-      if (!backgroundData.loadedImage || backgroundData.loadedImage.width <= 0 || !backgroundData.sourceImageData) {
-        return;
-      }
-
-      const sourceImageData = backgroundData.sourceImageData;
-      const imageWidth = resolveDimension(
-        sourceImageData.width,
-        sourceImageData.autoWidth,
-        backgroundData.loadedImage.width,
-        100
-      );
-      const imageHeight = resolveDimension(
-        sourceImageData.height,
-        sourceImageData.autoHeight,
-        backgroundData.loadedImage.height,
-        100
-      );
-
-      if (imageWidth <= 0 || imageHeight <= 0) {
-        return;
-      }
-
-      const style = backgroundData.style ?? 'tile';
-      const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, p5Instance.width);
-      const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, p5Instance.height);
-      const opacity = toNumberOrNull(sourceImageData.opacity) ?? 1;
-
-      target.push();
-      target.tint(255, opacity * 255);
-
-      if (style === 'tile') {
-        for (let y = 0; y < surfaceHeight; y += imageHeight) {
-          for (let x = 0; x < surfaceWidth; x += imageWidth) {
-            target.image(backgroundData.loadedImage, x, y, imageWidth, imageHeight);
-          }
-        }
-      } else {
-        const positionX = toNumberOrNull(sourceImageData.positionX) ?? p5Instance.width / 2;
-        const positionY = toNumberOrNull(sourceImageData.positionY) ?? p5Instance.height / 2;
-        target.image(backgroundData.loadedImage, positionX, positionY, imageWidth, imageHeight);
-      }
-
-      target.pop();
-    });
-
-    imageMetadataListRef.current.forEach(imageData => {
-      if (!imageData.loadedImage || imageData.loadedImage.width <= 0) {
-        return;
-      }
-
-      const width = resolveDimension(imageData.width, imageData.autoWidth, imageData.loadedImage.width, 100);
-      const height = resolveDimension(imageData.height, imageData.autoHeight, imageData.loadedImage.height, 100);
-      const positionX = toNumberOrNull(imageData.positionX) ?? p5Instance.width / 2;
-      const positionY = toNumberOrNull(imageData.positionY) ?? p5Instance.height / 2;
-      const opacity = toNumberOrNull(imageData.opacity) ?? 1;
-
-      target.push();
-      target.tint(255, opacity * 255);
-      target.image(imageData.loadedImage, positionX, positionY, width, height);
-      target.pop();
-    });
-
-    textMetadataListRef.current.forEach(textData => {
-      const rawText = typeof textData.text === 'string' ? textData.text : '';
-      if (!rawText.trim()) {
-        return;
-      }
-
-      const textValue = toBoolean(textData.caps) ? rawText.toUpperCase() : rawText;
-      const size = Math.max(1, toNumberOrNull(textData.size) ?? 16);
-      const width = Math.max(0, toNumberOrNull(textData.width) ?? 250);
-      const height = Math.max(0, toNumberOrNull(textData.height) ?? 120);
-      if (width <= 0 || height <= 0) {
-        return;
-      }
-
-      const positionX = toNumberOrNull(textData.positionX) ?? 0;
-      const positionY = toNumberOrNull(textData.positionY) ?? 0;
-      const opacity = clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1);
-
-      drawTextWithDecorations(target, p5Instance, {
-        text: textValue,
-        font: typeof textData.font === 'string' && textData.font.trim() ? textData.font : 'sans-serif',
-        size,
-        x: positionX,
-        y: positionY,
-        width,
-        height,
-        opacity,
-        bold: toBoolean(textData.bold),
-        italic: toBoolean(textData.italic),
-        underline: toBoolean(textData.underline),
-        strikethrough: toBoolean(textData.strikethrough),
-      });
-    });
-  };
-
   const draw = (p5Instance: p5) => {
     loadCursorImage(p5Instance, mousePointerRef.current);
 
     if (hasLivePreviewRef.current) {
-      renderScene(p5Instance, p5Instance);
+      const liveStart = performance.now();
+      p5Instance.background(pageBackgroundColorRef.current);
+      const liveTasks = createSceneDrawTasks({
+        p5Instance,
+        backgrounds: backgroundMetadataListRef.current,
+        images: imageMetadataListRef.current,
+        texts: textMetadataListRef.current,
+        tilePatternCanvasCache: tilePatternCanvasCacheRef.current,
+      });
+      liveTasks.forEach((task) => task(p5Instance, p5Instance));
+      logPreviewTiming('draw-live-scene', liveStart, { tasks: liveTasks.length });
+      hasDrawnForCurrentLoadRef.current = true;
+      maybeCompletePreviewLoad(previewLoadTokenRef.current);
       return;
     }
 
+    const signatureStart = performance.now();
     const signature = createRenderSignature(
       p5Instance.width,
       p5Instance.height,
@@ -453,8 +431,10 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       imageMetadataListRef.current,
       textMetadataListRef.current
     );
+    logPreviewTiming('draw-signature', signatureStart);
 
     if (!sceneBufferRef.current || renderSignatureRef.current !== signature) {
+      const setupStart = performance.now();
       renderSignatureRef.current = signature;
 
       if (sceneBufferRef.current) {
@@ -463,13 +443,69 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
 
       sceneBufferRef.current = p5Instance.createGraphics(p5Instance.width, p5Instance.height);
       const scene = sceneBufferRef.current;
-      renderScene(scene, p5Instance);
+      scene.background(pageBackgroundColorRef.current);
+
+      const tasks = createSceneDrawTasks({
+        p5Instance,
+        backgrounds: backgroundMetadataListRef.current,
+        images: imageMetadataListRef.current,
+        texts: textMetadataListRef.current,
+        tilePatternCanvasCache: tilePatternCanvasCacheRef.current,
+      });
+      const estimatedComplexity = estimateSceneComplexity(
+        backgroundMetadataListRef.current,
+        textMetadataListRef.current,
+        p5Instance.width,
+        p5Instance.height
+      );
+
+      if (estimatedComplexity > 4000 || tasks.length > 150) {
+        progressiveRenderRef.current = {
+          signature,
+          tasks,
+          taskIndex: 0,
+        };
+      } else {
+        tasks.forEach((task) => task(scene, p5Instance));
+        progressiveRenderRef.current = null;
+      }
+      logPreviewTiming('draw-setup-scene', setupStart, {
+        tasks: tasks.length,
+        complexity: estimatedComplexity,
+        progressive: Boolean(progressiveRenderRef.current),
+      });
+    }
+
+    const progressiveState = progressiveRenderRef.current;
+    if (sceneBufferRef.current && progressiveState && progressiveState.signature === signature) {
+      const progressiveStart = performance.now();
+      const nextIndex = runProgressiveRenderStep(
+        progressiveState.tasks,
+        progressiveState.taskIndex,
+        sceneBufferRef.current,
+        p5Instance,
+        7
+      );
+      progressiveState.taskIndex = nextIndex;
+      if (nextIndex >= progressiveState.tasks.length) {
+        progressiveRenderRef.current = null;
+        p5Instance.noLoop();
+      } else {
+        p5Instance.loop();
+      }
+      logPreviewTiming('draw-progressive-step', progressiveStart, {
+        stepTaskIndex: nextIndex,
+        totalTasks: progressiveState.tasks.length,
+      });
     }
 
     p5Instance.background(pageBackgroundColorRef.current);
     if (sceneBufferRef.current) {
       p5Instance.image(sceneBufferRef.current, 0, 0);
     }
+
+    hasDrawnForCurrentLoadRef.current = true;
+    maybeCompletePreviewLoad(previewLoadTokenRef.current);
   };
 
   const windowResized = (p5Instance: p5) => {
@@ -494,8 +530,308 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       pointerEvents: 'none'
     }}>
       <Sketch setup={setup} draw={draw} windowResized={windowResized} />
+      {isPreviewLoading && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'rgba(0, 0, 0, 0.6)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.35)',
+              borderRadius: '8px',
+              padding: '10px 14px',
+            }}
+          >
+            <span className="loading-spinner" aria-hidden="true" />
+            <span>Loading page preview...</span>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+const createSceneDrawTasks = ({
+  p5Instance,
+  backgrounds,
+  images,
+  texts,
+  tilePatternCanvasCache,
+}: {
+  p5Instance: p5;
+  backgrounds: BackgroundMetadataWithImage[];
+  images: ImageMetadataWithImage[];
+  texts: TextMetadata[];
+  tilePatternCanvasCache: WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>;
+}) => {
+  const tasks: DrawTask[] = [];
+
+  backgrounds.forEach((backgroundData) => {
+    if (!backgroundData.loadedImage || backgroundData.loadedImage.width <= 0 || !backgroundData.sourceImageData) {
+      return;
+    }
+
+    const sourceImageData = backgroundData.sourceImageData;
+    const imageWidth = resolveDimension(
+      sourceImageData.width,
+      sourceImageData.autoWidth,
+      backgroundData.loadedImage.width,
+      100
+    );
+    const imageHeight = resolveDimension(
+      sourceImageData.height,
+      sourceImageData.autoHeight,
+      backgroundData.loadedImage.height,
+      100
+    );
+
+    if (imageWidth <= 0 || imageHeight <= 0) {
+      return;
+    }
+
+    const style = backgroundData.style ?? 'tile';
+    const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, p5Instance.width);
+    const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, p5Instance.height);
+    const opacity = clamp(toNumberOrNull(sourceImageData.opacity) ?? 1, 0, 1);
+    const canUsePatternFill = !isGifPath(sourceImageData.path);
+
+    if (style === 'tile') {
+      tasks.push((target) => {
+        if (canUsePatternFill && drawTiledBackgroundWithPattern(
+          target,
+          backgroundData.loadedImage as p5.Image,
+          imageWidth,
+          imageHeight,
+          surfaceWidth,
+          surfaceHeight,
+          opacity,
+          tilePatternCanvasCache
+        )) {
+          return;
+        }
+
+        target.push();
+        target.tint(255, opacity * 255);
+        for (let y = 0; y < surfaceHeight; y += imageHeight) {
+          for (let x = 0; x < surfaceWidth; x += imageWidth) {
+            target.image(backgroundData.loadedImage as p5.Image, x, y, imageWidth, imageHeight);
+          }
+        }
+        target.pop();
+      });
+      return;
+    }
+
+    const positionX = toNumberOrNull(sourceImageData.positionX) ?? p5Instance.width / 2;
+    const positionY = toNumberOrNull(sourceImageData.positionY) ?? p5Instance.height / 2;
+    tasks.push((target) => {
+      target.push();
+      target.tint(255, opacity * 255);
+      target.image(backgroundData.loadedImage as p5.Image, positionX, positionY, imageWidth, imageHeight);
+      target.pop();
+    });
+  });
+
+  images.forEach((imageData) => {
+    if (!imageData.loadedImage || imageData.loadedImage.width <= 0) {
+      return;
+    }
+
+    const width = resolveDimension(imageData.width, imageData.autoWidth, imageData.loadedImage.width, 100);
+    const height = resolveDimension(imageData.height, imageData.autoHeight, imageData.loadedImage.height, 100);
+    const positionX = toNumberOrNull(imageData.positionX) ?? p5Instance.width / 2;
+    const positionY = toNumberOrNull(imageData.positionY) ?? p5Instance.height / 2;
+    const opacity = clamp(toNumberOrNull(imageData.opacity) ?? 1, 0, 1);
+
+    tasks.push((target) => {
+      target.push();
+      target.tint(255, opacity * 255);
+      target.image(imageData.loadedImage as p5.Image, positionX, positionY, width, height);
+      target.pop();
+    });
+  });
+
+  texts.forEach((textData) => {
+    const rawText = typeof textData.text === 'string' ? textData.text : '';
+    if (!rawText.trim()) {
+      return;
+    }
+
+    const textValue = toBoolean(textData.caps) ? rawText.toUpperCase() : rawText;
+    const size = Math.max(1, toNumberOrNull(textData.size) ?? 16);
+    const width = Math.max(0, toNumberOrNull(textData.width) ?? 250);
+    const height = Math.max(0, toNumberOrNull(textData.height) ?? 120);
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    const positionX = toNumberOrNull(textData.positionX) ?? 0;
+    const positionY = toNumberOrNull(textData.positionY) ?? 0;
+    const opacity = clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1);
+
+    tasks.push((target) => {
+      drawTextWithDecorations(target, p5Instance, {
+        text: textValue,
+        font: typeof textData.font === 'string' && textData.font.trim() ? textData.font : 'sans-serif',
+        size,
+        x: positionX,
+        y: positionY,
+        width,
+        height,
+        opacity,
+        bold: toBoolean(textData.bold),
+        italic: toBoolean(textData.italic),
+        underline: toBoolean(textData.underline),
+        strikethrough: toBoolean(textData.strikethrough),
+      });
+    });
+  });
+
+  return tasks;
+};
+
+const drawTiledBackgroundWithPattern = (
+  target: p5 | p5.Graphics,
+  image: p5.Image,
+  tileWidth: number,
+  tileHeight: number,
+  surfaceWidth: number,
+  surfaceHeight: number,
+  opacity: number,
+  tilePatternCanvasCache: WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>
+) => {
+  const drawingContext = (target as unknown as {drawingContext?: CanvasRenderingContext2D}).drawingContext;
+  if (!drawingContext || !(drawingContext instanceof CanvasRenderingContext2D)) {
+    return false;
+  }
+
+  const imageCanvas = (image as unknown as {canvas?: HTMLCanvasElement}).canvas;
+  if (!imageCanvas || tileWidth <= 0 || tileHeight <= 0) {
+    return false;
+  }
+
+  const cacheKey = `${Math.round(tileWidth)}x${Math.round(tileHeight)}`;
+  let perImageCache = tilePatternCanvasCache.get(imageCanvas);
+  if (!perImageCache) {
+    perImageCache = new Map();
+    tilePatternCanvasCache.set(imageCanvas, perImageCache);
+  }
+  let tileCanvas = perImageCache.get(cacheKey);
+  if (!tileCanvas) {
+    if (typeof document === 'undefined') {
+      return false;
+    }
+    tileCanvas = document.createElement('canvas');
+    tileCanvas.width = Math.max(1, Math.round(tileWidth));
+    tileCanvas.height = Math.max(1, Math.round(tileHeight));
+    const tileContext = tileCanvas.getContext('2d');
+    if (!tileContext) {
+      return false;
+    }
+    tileContext.clearRect(0, 0, tileCanvas.width, tileCanvas.height);
+    tileContext.drawImage(imageCanvas, 0, 0, tileCanvas.width, tileCanvas.height);
+    perImageCache.set(cacheKey, tileCanvas);
+  }
+
+  const pattern = drawingContext.createPattern(tileCanvas, 'repeat');
+  if (!pattern) {
+    return false;
+  }
+
+  drawingContext.save();
+  drawingContext.globalAlpha *= opacity;
+  drawingContext.fillStyle = pattern;
+  drawingContext.fillRect(0, 0, surfaceWidth, surfaceHeight);
+  drawingContext.restore();
+  return true;
+};
+
+const runProgressiveRenderStep = (
+  tasks: DrawTask[],
+  startIndex: number,
+  target: p5.Graphics,
+  p5Instance: p5,
+  budgetMs: number
+) => {
+  const start = performance.now();
+  let index = startIndex;
+  while (index < tasks.length && (performance.now() - start) < budgetMs) {
+    tasks[index](target, p5Instance);
+    index += 1;
+  }
+  return index;
+};
+
+const estimateSceneComplexity = (
+  backgrounds: BackgroundMetadataWithImage[],
+  texts: TextMetadata[],
+  canvasWidth: number,
+  canvasHeight: number
+) => {
+  let complexity = 0;
+  backgrounds.forEach((backgroundData) => {
+    if (!backgroundData.loadedImage || !backgroundData.sourceImageData) {
+      return;
+    }
+    const sourceImageData = backgroundData.sourceImageData;
+    const imageWidth = Math.max(1, resolveDimension(
+      sourceImageData.width,
+      sourceImageData.autoWidth,
+      backgroundData.loadedImage.width,
+      100
+    ));
+    const imageHeight = Math.max(1, resolveDimension(
+      sourceImageData.height,
+      sourceImageData.autoHeight,
+      backgroundData.loadedImage.height,
+      100
+    ));
+    const style = backgroundData.style ?? 'tile';
+    if (style !== 'tile') {
+      complexity += 1;
+      return;
+    }
+    const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, canvasWidth);
+    const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, canvasHeight);
+    complexity += Math.ceil(surfaceWidth / imageWidth) * Math.ceil(surfaceHeight / imageHeight);
+  });
+
+  texts.forEach((textData) => {
+    const textValue = typeof textData.text === 'string' ? textData.text : '';
+    complexity += Math.max(1, Math.ceil(textValue.length / 30));
+  });
+
+  return complexity;
+};
+
+const shouldProfilePreview = () => {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  return Boolean((window as Window & {__IMYWIS_PREVIEW_PROFILE?: boolean}).__IMYWIS_PREVIEW_PROFILE);
+};
+
+const logPreviewTiming = (label: string, startedAt: number, details?: Record<string, unknown>) => {
+  const duration = performance.now() - startedAt;
+  if (!shouldProfilePreview() && duration < 24) {
+    return;
+  }
+  if (details) {
+    console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`, details);
+    return;
+  }
+  console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`);
 };
 
 const withCorsProxy = (path: string) =>
