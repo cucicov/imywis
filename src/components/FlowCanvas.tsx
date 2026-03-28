@@ -180,10 +180,21 @@ const FlowCanvas = () => {
     const targetHandle = connection.targetHandle;
     const targetNode = nodes.find(node => node.id === connection.target);
 
+    // Disallow multiple connections between the same nodes
+    const hasConnectionBetweenNodes = edges.some(
+      (edge) =>
+        (edge.source === connection.source && edge.target === connection.target)
+        || (edge.source === connection.target && edge.target === connection.source)
+    );
+
     const sourceType = sourceHandle?.split('-')[0];
     const targetType = targetHandle?.split('-')[0];
 
     if (sourceType !== targetType) {
+      return false;
+    }
+
+    if (hasConnectionBetweenNodes) {
       return false;
     }
 

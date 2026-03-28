@@ -4,6 +4,10 @@
 
 
 
+### Rules
+- two nodes cannot have more than one connection of any type.
+
+
 ### Sample images url
 - https://www.ephotozine.com/resize/articles/22672/Laku.jpg?RTUdGk5cXyJFCgsJVANtdxU+cVRdHxFYFw1Gewk0T1JYFEtzen5YdgthHHsvEVxR
 - https://www.ephotozine.com/resize/articles/22672/I_See_You.jpg?RTUdGk5cXyJFCgsJVANtdxU+cVRdHxFYFw1Gewk0T1JYFEtzen5YdgthHHsvEVxR
