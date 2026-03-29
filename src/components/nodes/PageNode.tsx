@@ -53,7 +53,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                     width: '10px',
                     height: '10px',
                     backgroundColor: '#D05774',
-                    border: '1px solid black'}}
+                    border: '1px solid white'}}
             />
 
             <b>{data.label + "-" + id}</b>

@@ -18,9 +18,12 @@ type ImageMetadataWithImage = Partial<ImageNodeData> & {
   loadedImage: p5.Image | null;
 };
 
+type BackgroundRenderableImage = p5.Image | p5.Graphics;
+
 type BackgroundMetadataWithImage = Partial<BackgroundNodeData> & {
-  loadedImage: p5.Image | null;
+  loadedImage: BackgroundRenderableImage | null;
   sourceImageData: Partial<ImageNodeData> | null;
+  sourceType: typeof NODE_TYPES.IMAGE | typeof NODE_TYPES.TEXT | null;
 };
 
 type TextMetadata = Partial<TextNodeData>;
@@ -213,6 +216,8 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       const newBackgroundMetadataList: BackgroundMetadataWithImage[] = [];
       const newTextMetadataList: TextMetadata[] = [];
 
+      releaseTextBackgroundSurfaces(backgroundMetadataListRef.current);
+
       imageNodesMetadata.forEach(imageNodeMetadata => {
         if (!imageNodeMetadata?.data) {
           return;
@@ -262,10 +267,19 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
         const sourceImageMetadata = backgroundData.metadata?.sourceNodes.find(
           source => source.type === NODE_TYPES.IMAGE
         );
-        const sourceImageData = (sourceImageMetadata?.data ?? null) as Partial<ImageNodeData> | null;
+        const sourceTextMetadata = sourceImageMetadata
+          ? undefined
+          : backgroundData.metadata?.sourceNodes.find(
+            source => source.type === NODE_TYPES.TEXT
+          );
 
-        let loadedImage: p5.Image | null = null;
-        if (sourceImageData?.path && p5InstanceRef.current) {
+        const sourceImageData = (sourceImageMetadata?.data ?? sourceTextMetadata?.data ?? null) as Partial<ImageNodeData> | null;
+
+        let sourceType: typeof NODE_TYPES.IMAGE | typeof NODE_TYPES.TEXT | null = null;
+        let loadedImage: BackgroundRenderableImage | null = null;
+
+        if (sourceImageMetadata && sourceImageData?.path && p5InstanceRef.current) {
+          sourceType = NODE_TYPES.IMAGE;
           const imagePath = withCorsProxy(sourceImageData.path);
           const cachedImage = imageCacheRef.current.get(imagePath);
           if (cachedImage) {
@@ -289,12 +303,17 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
               maybeCompletePreviewLoad(currentLoadToken);
             });
           }
+        } else if (sourceTextMetadata && p5InstanceRef.current) {
+          sourceType = NODE_TYPES.TEXT;
+          const sourceTextData = sourceTextMetadata.data as Partial<TextNodeData>;
+          loadedImage = createTextSurfaceImage(p5InstanceRef.current, sourceTextData);
         }
 
         newBackgroundMetadataList.push({
           ...backgroundData,
           loadedImage,
           sourceImageData,
+          sourceType,
         });
       });
 
@@ -337,6 +356,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       });
       maybeCompletePreviewLoad(currentLoadToken);
     } else {
+      releaseTextBackgroundSurfaces(backgroundMetadataListRef.current);
       imageMetadataListRef.current = [];
       backgroundMetadataListRef.current = [];
       textMetadataListRef.current = [];
@@ -357,6 +377,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
         window.clearTimeout(pendingRedrawTimerRef.current);
         pendingRedrawTimerRef.current = null;
       }
+      releaseTextBackgroundSurfaces(backgroundMetadataListRef.current);
       sceneBufferRef.current?.remove();
       sceneBufferRef.current = null;
       progressiveRenderRef.current = null;
@@ -842,6 +863,52 @@ const withCorsProxy = (path: string) =>
 const isGifPath = (path: unknown) => typeof path === 'string' && /\.gif(?:$|[?#])/i.test(path.trim());
 
 const toBoolean = (value: unknown) => value === true || value === 'true';
+
+const releaseTextBackgroundSurfaces = (backgrounds: BackgroundMetadataWithImage[]) => {
+  backgrounds.forEach((background) => {
+    if (background.sourceType !== NODE_TYPES.TEXT || !background.loadedImage) {
+      return;
+    }
+    const renderable = background.loadedImage as p5.Graphics & {remove?: () => void};
+    renderable.remove?.();
+  });
+};
+
+const createTextSurfaceImage = (
+  p5Instance: p5,
+  textData: Partial<TextNodeData>
+): p5.Graphics | null => {
+  const rawText = typeof textData.text === 'string' ? textData.text : '';
+  if (!rawText.trim()) {
+    return null;
+  }
+
+  const textValue = toBoolean(textData.caps) ? rawText.toUpperCase() : rawText;
+  const size = Math.max(1, toNumberOrNull(textData.size) ?? 16);
+  const width = Math.max(1, toNumberOrNull(textData.width) ?? 250);
+  const height = Math.max(1, toNumberOrNull(textData.height) ?? 120);
+  const opacity = clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1);
+
+  const surface = p5Instance.createGraphics(width, height);
+  surface.clear(0, 0, 0, 0);
+
+  drawTextWithDecorations(surface, p5Instance, {
+    text: textValue,
+    font: typeof textData.font === 'string' && textData.font.trim() ? textData.font : 'sans-serif',
+    size,
+    x: 0,
+    y: 0,
+    width,
+    height,
+    opacity,
+    bold: toBoolean(textData.bold),
+    italic: toBoolean(textData.italic),
+    underline: toBoolean(textData.underline),
+    strikethrough: toBoolean(textData.strikethrough),
+  });
+
+  return surface;
+};
 
 const resolveDimension = (
   configuredSize: unknown,
