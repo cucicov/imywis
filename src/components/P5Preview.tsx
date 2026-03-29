@@ -49,6 +49,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const imageCacheRef = useRef<Map<string, p5.Image>>(new Map());
   const lastRedrawAtRef = useRef(0);
   const pendingRedrawTimerRef = useRef<number | null>(null);
+  const pendingPreviewLoadingTimerRef = useRef<number | null>(null);
   const previewLoadTokenRef = useRef(0);
   const pendingAssetLoadsRef = useRef(0);
   const hasDrawnForCurrentLoadRef = useRef(false);
@@ -93,6 +94,10 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   }, [pageNodeData]);
 
   const setPreviewLoadingState = useCallback((nextValue: boolean) => {
+    if (!nextValue && pendingPreviewLoadingTimerRef.current !== null) {
+      window.clearTimeout(pendingPreviewLoadingTimerRef.current);
+      pendingPreviewLoadingTimerRef.current = null;
+    }
     if (isPreviewLoadingRef.current === nextValue) {
       return;
     }
@@ -188,8 +193,18 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     lastRedrawAtRef.current = 0;
     progressiveRenderRef.current = null;
     renderSignatureRef.current = '';
-    setPreviewLoadingState(true);
-  }, [setPreviewLoadingState]);
+
+    if (!isPreviewLoadingRef.current) {
+      isPreviewLoadingRef.current = true;
+      if (pendingPreviewLoadingTimerRef.current !== null) {
+        window.clearTimeout(pendingPreviewLoadingTimerRef.current);
+      }
+      pendingPreviewLoadingTimerRef.current = window.setTimeout(() => {
+        pendingPreviewLoadingTimerRef.current = null;
+        setIsPreviewLoading(true);
+      }, 0);
+    }
+  }, []);
 
   useEffect(() => {
     beginPreviewLoad();
@@ -376,6 +391,10 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       if (pendingRedrawTimerRef.current !== null) {
         window.clearTimeout(pendingRedrawTimerRef.current);
         pendingRedrawTimerRef.current = null;
+      }
+      if (pendingPreviewLoadingTimerRef.current !== null) {
+        window.clearTimeout(pendingPreviewLoadingTimerRef.current);
+        pendingPreviewLoadingTimerRef.current = null;
       }
       releaseTextBackgroundSurfaces(backgroundMetadataListRef.current);
       sceneBufferRef.current?.remove();

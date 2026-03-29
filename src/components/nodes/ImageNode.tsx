@@ -1,5 +1,5 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
-import {useCallback, useEffect, useState, type ChangeEvent} from 'react';
+import {useCallback, useState, type ChangeEvent} from 'react';
 import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
@@ -8,11 +8,8 @@ import {APP_CONFIG} from '../../config/appConfig.ts';
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
-    const [previewError, setPreviewError] = useState(false);
-
-    useEffect(() => {
-        setPreviewError(false);
-    }, [data.path]);
+    const [previewErrorPath, setPreviewErrorPath] = useState<string | null>(null);
+    const hasPreviewError = previewErrorPath === data.path;
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -96,7 +93,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     }}
             />
 
-            {data.path && !previewError && (
+            {data.path && !hasPreviewError && (
                 <div style={{
                     marginBottom: '6px',
                     padding: '3px',
@@ -109,7 +106,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                             ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(data.path)}`
                             : data.path}
                         alt={`${data.label ?? 'Image'} preview`}
-                        onError={() => setPreviewError(true)}
+                        onError={() => setPreviewErrorPath(data.path)}
                         style={{
                             display: 'block',
                             width: '80px',
