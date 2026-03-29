@@ -4,6 +4,7 @@ import {updateNodeAndPropagate} from '../../utils/nodeUtils.ts';
 import {NODE_TYPES, type TextNodeData} from '../../types/nodeTypes';
 import {HandleTypes} from '../../types/handleTypes';
 import {APP_CONFIG} from '../../config/appConfig.ts';
+import CumulativeCenterSlider from '../CumulativeCenterSlider.tsx';
 
 const labelStyle: CSSProperties = {
     fontSize: '10px',
@@ -29,14 +30,27 @@ const rowStyle: CSSProperties = {
 
 const rowLabelStyle: CSSProperties = {
     ...labelStyle,
-    width: '70px',
+    width: '78px',
     flexShrink: 0,
     lineHeight: '18px',
+};
+
+const controlStackStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: 0,
+    width: '100%',
 };
 
 const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEXT>>) => {
     const {setNodes, getEdges} = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
+    const sizeNumericValue = toFiniteNumber(data.size, 16);
+    const widthNumericValue = toFiniteNumber(data.width, 250);
+    const heightNumericValue = toFiniteNumber(data.height, 120);
+    const positionXNumericValue = toFiniteNumber(data.positionX, 0);
+    const positionYNumericValue = toFiniteNumber(data.positionY, 0);
 
     const onFieldChange = useCallback((evt: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const {id: targetId, value} = evt.target;
@@ -47,6 +61,11 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
 
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
+    }, [getEdges, id, setNodes]);
+
+    const onNumericSliderChange = useCallback((field: string, nextValue: number) => {
+        const edges = getEdges();
+        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
     }, [getEdges, id, setNodes]);
 
     return (
@@ -142,7 +161,7 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
 
                 <div style={rowStyle}>
                     <label htmlFor="field-font" style={rowLabelStyle}>font:</label>
-                    <div>
+                    <div style={controlStackStyle}>
                         <select
                         id="field-font"
                         className="nodrag"
@@ -178,65 +197,108 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
 
                 <div style={rowStyle}>
                     <label htmlFor="field-size" style={rowLabelStyle}>size:</label>
-                    <input
-                        id="field-size"
-                        className="nodrag"
-                        type="number"
-                        min={1}
-                        value={data.size ?? ''}
-                        onChange={onFieldChange}
-                        style={inputStyle}
-                    />
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-size"
+                            className="nodrag"
+                            type="number"
+                            min={1}
+                            value={data.size ?? ''}
+                            onChange={onFieldChange}
+                            style={inputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={sizeNumericValue}
+                            minCumulativeValue={1}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('size', nextValue)}
+                        />
+                    </div>
                 </div>
 
                 <div style={rowStyle}>
                     <label htmlFor="field-width" style={rowLabelStyle}>width(px):</label>
-                    <input
-                        id="field-width"
-                        className="nodrag"
-                        type="number"
-                        min={0}
-                        value={data.width ?? ''}
-                        onChange={onFieldChange}
-                        style={inputStyle}
-                    />
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-width"
+                            className="nodrag"
+                            type="number"
+                            min={0}
+                            value={data.width ?? ''}
+                            onChange={onFieldChange}
+                            style={inputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={widthNumericValue}
+                            minCumulativeValue={0}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('width', nextValue)}
+                        />
+                    </div>
                 </div>
 
                 <div style={rowStyle}>
                     <label htmlFor="field-height" style={rowLabelStyle}>height(px):</label>
-                    <input
-                        id="field-height"
-                        className="nodrag"
-                        type="number"
-                        min={0}
-                        value={data.height ?? ''}
-                        onChange={onFieldChange}
-                        style={inputStyle}
-                    />
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-height"
+                            className="nodrag"
+                            type="number"
+                            min={0}
+                            value={data.height ?? ''}
+                            onChange={onFieldChange}
+                            style={inputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={heightNumericValue}
+                            minCumulativeValue={0}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('height', nextValue)}
+                        />
+                    </div>
                 </div>
 
                 <div style={rowStyle}>
                     <label htmlFor="field-positionX" style={rowLabelStyle}>position-x:</label>
-                    <input
-                        id="field-positionX"
-                        className="nodrag"
-                        type="number"
-                        value={data.positionX ?? ''}
-                        onChange={onFieldChange}
-                        style={inputStyle}
-                    />
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-positionX"
+                            className="nodrag"
+                            type="number"
+                            value={data.positionX ?? ''}
+                            onChange={onFieldChange}
+                            style={inputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={positionXNumericValue}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('positionX', nextValue)}
+                        />
+                    </div>
                 </div>
 
                 <div style={rowStyle}>
                     <label htmlFor="field-positionY" style={rowLabelStyle}>position-y:</label>
-                    <input
-                        id="field-positionY"
-                        className="nodrag"
-                        type="number"
-                        value={data.positionY ?? ''}
-                        onChange={onFieldChange}
-                        style={inputStyle}
-                    />
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-positionY"
+                            className="nodrag"
+                            type="number"
+                            value={data.positionY ?? ''}
+                            onChange={onFieldChange}
+                            style={inputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={positionYNumericValue}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('positionY', nextValue)}
+                        />
+                    </div>
                 </div>
 
                 <div style={rowStyle}>
@@ -296,3 +358,8 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
 };
 
 export default TextNode;
+
+const toFiniteNumber = (value: unknown, fallback: number) => {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};

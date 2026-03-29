@@ -1,15 +1,65 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
-import {useCallback, useState, type ChangeEvent} from 'react';
+import {useCallback, useState, type ChangeEvent, type CSSProperties} from 'react';
 import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
 import {APP_CONFIG} from '../../config/appConfig.ts';
+import CumulativeCenterSlider from '../CumulativeCenterSlider.tsx';
+
+const labelStyle: CSSProperties = {
+    fontSize: '10px',
+    color: '#792D05',
+    whiteSpace: 'nowrap',
+};
+
+const rowStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+};
+
+const rowLabelStyle: CSSProperties = {
+    ...labelStyle,
+    width: '78px',
+    flexShrink: 0,
+    lineHeight: '18px',
+};
+
+const controlStackStyle: CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    minWidth: 0,
+    width: '100%',
+};
+
+const textInputStyle: CSSProperties = {
+    fontSize: '11px',
+    width: '130px',
+    border: 0,
+    background: '#fff',
+    opacity: 0.7,
+    color: 'black',
+};
+
+const numberInputStyle: CSSProperties = {
+    fontSize: '11px',
+    width: '90px',
+    border: 0,
+    background: '#fff',
+    opacity: 0.7,
+    color: 'black',
+};
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const [previewErrorPath, setPreviewErrorPath] = useState<string | null>(null);
     const hasPreviewError = previewErrorPath === data.path;
+    const widthNumericValue = toFiniteNumber(data.width, 100);
+    const heightNumericValue = toFiniteNumber(data.height, 100);
+    const positionXNumericValue = toFiniteNumber(data.positionX, 0);
+    const positionYNumericValue = toFiniteNumber(data.positionY, 0);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -18,6 +68,11 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
 
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
+    }, [getEdges, id, setNodes]);
+
+    const onNumericSliderChange = useCallback((field: string, nextValue: number) => {
+        const edges = getEdges();
+        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
     }, [getEdges, id, setNodes]);
 
     return (
@@ -106,7 +161,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                             ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(data.path)}`
                             : data.path}
                         alt={`${data.label ?? 'Image'} preview`}
-                        onError={() => setPreviewErrorPath(data.path)}
+                        onError={() => setPreviewErrorPath(data.path ?? null)}
                         style={{
                             display: 'block',
                             width: '80px',
@@ -118,112 +173,135 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                 </div>
             )}
             <b>{data.label + "-" + id}</b>
-            <div style={{display: 'flex'}}>
-                <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '5px'}}>
-                    <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>path:</label>
-                    <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>width(px):</label>
-                    <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>height(px):</label>
-                    <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>position-x:</label>
-                    <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>position-y:</label>
-                    <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>opacity:</label>
+            <div style={{display: 'flex', flexDirection: 'column', gap: '7px', marginTop: '6px'}}>
+                <div style={rowStyle}>
+                    <label style={rowLabelStyle}>path:</label>
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-path"
+                            className="nodrag"
+                            type="text"
+                            value={data.path ?? ''}
+                            onChange={onTextChange}
+                            style={textInputStyle}
+                        />
+                    </div>
                 </div>
-                <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '3px'}}>
-                    <input
-                        id="field-path"
-                        className="nodrag"
-                        type="text"
-                        value={data.path ?? ''}
-                        onChange={onTextChange}
-                        style={{ fontSize: '10px', width: '100px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
-                    />
-                    <div style={{display: 'flex', flexDirection: 'row', gap: '0px'}}>
-                        <div>
+                <div style={rowStyle}>
+                    <label style={rowLabelStyle}>width(px):</label>
+                    <div style={controlStackStyle}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                             <input
                                 id="field-width"
                                 className="nodrag"
                                 type="number"
                                 value={data.width ?? ''}
                                 onChange={onTextChange}
-                                style={{ fontSize: '10px', width: '50px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
+                                style={numberInputStyle}
                             />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '10px', color: '#792D05', whiteSpace: 'nowrap' }}>auto:</label>
-                        </div>
-                        <div>
+                            <label style={labelStyle}>auto</label>
                             <input
                                 id="field-autoWidth"
                                 className="nodrag"
                                 type="checkbox"
                                 checked={data.autoWidth ?? false}
                                 onChange={onTextChange}
-                                style={{
-                                    fontSize: '11px',
-                                    width: '14px',
-                                    height: '14px',
-                                    cursor: 'pointer',
-                                    accentColor: '#792D05',
-                                    opacity: 0.7
-                                }}
+                                style={{width: '14px', height: '14px', cursor: 'pointer', accentColor: '#792D05', opacity: 0.7}}
                             />
                         </div>
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={widthNumericValue}
+                            minCumulativeValue={0}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('width', nextValue)}
+                        />
                     </div>
-                    <div style={{display: 'flex', flexDirection: 'row', gap: '0px'}}>
-                        <div>
+                </div>
+                <div style={rowStyle}>
+                    <label style={rowLabelStyle}>height(px):</label>
+                    <div style={controlStackStyle}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
                             <input
                                 id="field-height"
                                 className="nodrag"
                                 type="number"
                                 value={data.height ?? ''}
                                 onChange={onTextChange}
-                                style={{ fontSize: '11px', width: '50px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
+                                style={numberInputStyle}
                             />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '11px', color: '#792D05', whiteSpace: 'nowrap' }}>auto:</label>
-                        </div>
-                        <div>
+                            <label style={labelStyle}>auto</label>
                             <input
                                 id="field-autoHeight"
                                 className="nodrag"
                                 type="checkbox"
                                 checked={data.autoHeight ?? false}
                                 onChange={onTextChange}
-                                style={{
-                                    fontSize: '11px',
-                                    width: '14px',
-                                    height: '14px',
-                                    cursor: 'pointer',
-                                    accentColor: '#792D05',
-                                    opacity: 0.7
-                                }}
+                                style={{width: '14px', height: '14px', cursor: 'pointer', accentColor: '#792D05', opacity: 0.7}}
                             />
                         </div>
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={heightNumericValue}
+                            minCumulativeValue={0}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('height', nextValue)}
+                        />
                     </div>
-                    <input
-                        id="field-positionX"
-                        className="nodrag"
-                        type="text"
-                        value={data.positionX ?? ''}
-                        onChange={onTextChange}
-                        style={{ fontSize: '11px', width: '100px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
-                    />
-                    <input
-                        id="field-positionY"
-                        className="nodrag"
-                        type="text"
-                        value={data.positionY ?? ''}
-                        onChange={onTextChange}
-                        style={{ fontSize: '11px', width: '100px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
-                    />
-                    <input
-                        id="field-opacity"
-                        className="nodrag"
-                        type="text"
-                        value={data.opacity ?? ''}
-                        onChange={onTextChange}
-                        style={{ fontSize: '11px', width: '100px', border: 0, background: '#fff', opacity: 0.7, color: 'black'}}
-                    />
+                </div>
+                <div style={rowStyle}>
+                    <label style={rowLabelStyle}>position-x:</label>
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-positionX"
+                            className="nodrag"
+                            type="number"
+                            value={data.positionX ?? ''}
+                            onChange={onTextChange}
+                            style={textInputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={positionXNumericValue}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('positionX', nextValue)}
+                        />
+                    </div>
+                </div>
+                <div style={rowStyle}>
+                    <label style={rowLabelStyle}>position-y:</label>
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-positionY"
+                            className="nodrag"
+                            type="number"
+                            value={data.positionY ?? ''}
+                            onChange={onTextChange}
+                            style={textInputStyle}
+                        />
+                        <CumulativeCenterSlider
+                            showValuePreview={false}
+                            className="nodrag nopan nowheel"
+                            cumulativeValue={positionYNumericValue}
+                            onCumulativeChange={(nextValue) => onNumericSliderChange('positionY', nextValue)}
+                        />
+                    </div>
+                </div>
+                <div style={rowStyle}>
+                    <label style={rowLabelStyle}>opacity:</label>
+                    <div style={controlStackStyle}>
+                        <input
+                            id="field-opacity"
+                            className="nodrag"
+                            type="number"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={data.opacity ?? ''}
+                            onChange={onTextChange}
+                            style={textInputStyle}
+                        />
+                    </div>
                 </div>
             </div>
             
@@ -277,3 +355,8 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
 };
 
 export default ImageNode;
+
+const toFiniteNumber = (value: unknown, fallback: number) => {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
