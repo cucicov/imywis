@@ -195,6 +195,19 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                                 />
                             </div>
                         </div>
+                        <div style={rowStyle}>
+                            <label style={rowLabelStyle}>popUp:</label>
+                            <div style={controlStackStyle}>
+                                <input
+                                    id="field-popUp"
+                                    className="nodrag"
+                                    type="checkbox"
+                                    checked={data.popUp ?? false}
+                                    onChange={onTextChange}
+                                    style={{width: '14px', height: '14px', cursor: 'pointer', accentColor: '#57212E', opacity: 0.8}}
+                                />
+                            </div>
+                        </div>
                     </div>
 
                     {data.metadata && data.metadata.sourceNodes.length > 0 && (

@@ -12,6 +12,7 @@ const AddPageNodeButton = () => {
             width: 100,
             height: 100,
             mousePointer: '',
+            popUp: false,
             backgroundColor: '#ffffff'
         };
         const { width, height, transform } = store.getState();
