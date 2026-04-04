@@ -89,14 +89,19 @@ const FlowCanvas = () => {
 
   const onConnect = useCallback(
       (connection: Connection) => {
-        const sourceId = connection.source;
-        const targetId = connection.target;
+        const normalizedConnection = normalizeConnectionDirection(connection);
+        if (!normalizedConnection) {
+          return;
+        }
+
+        const sourceId = normalizedConnection.source;
+        const targetId = normalizedConnection.target;
 
         if (!sourceId || !targetId) {
           return;
         }
 
-        setEdges((eds) => addEdge(connection, eds));
+        setEdges((eds) => addEdge(normalizedConnection, eds));
       },
       [setEdges]
   );
@@ -243,15 +248,20 @@ const FlowCanvas = () => {
 
   // validate node connections based on the node input type
   const isValidConnection = useCallback((connection: Edge | Connection) => {
-    const sourceHandle = connection.sourceHandle;
-    const targetHandle = connection.targetHandle;
-    const targetNode = nodes.find(node => node.id === connection.target);
+    const normalizedConnection = normalizeConnectionDirection(connection);
+    if (!normalizedConnection) {
+      return false;
+    }
+
+    const sourceHandle = normalizedConnection.sourceHandle;
+    const targetHandle = normalizedConnection.targetHandle;
+    const targetNode = nodes.find(node => node.id === normalizedConnection.target);
 
     // Disallow multiple connections between the same nodes
     const hasConnectionBetweenNodes = edges.some(
       (edge) =>
-        (edge.source === connection.source && edge.target === connection.target)
-        || (edge.source === connection.target && edge.target === connection.source)
+        (edge.source === normalizedConnection.source && edge.target === normalizedConnection.target)
+        || (edge.source === normalizedConnection.target && edge.target === normalizedConnection.source)
     );
 
     const sourceType = sourceHandle?.split('-')[0];
@@ -275,7 +285,7 @@ const FlowCanvas = () => {
     const rules = CONNECTION_RULES[targetType || ''];
     if (!rules?.allowMultiple) {
       const existingConnection = edges.find(
-        (edge) => edge.target === connection.target && edge.targetHandle === targetHandle
+        (edge) => edge.target === normalizedConnection.target && edge.targetHandle === targetHandle
       );
       if (existingConnection) {
         return false;
@@ -332,6 +342,50 @@ const resolvePageBackgroundColor = (value: unknown) => {
 
   const trimmed = value.trim();
   return /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(trimmed) ? trimmed : '#ffffff';
+};
+
+const normalizeConnectionDirection = (connection: Edge | Connection): Connection | null => {
+  const source = connection.source;
+  const target = connection.target;
+  const sourceHandle = connection.sourceHandle;
+  const targetHandle = connection.targetHandle;
+
+  if (!source || !target || !sourceHandle || !targetHandle) {
+    return null;
+  }
+
+  const sourceRole = getHandleRole(sourceHandle);
+  const targetRole = getHandleRole(targetHandle);
+
+  if (sourceRole === 'output' && targetRole === 'input') {
+    return {
+      source,
+      target,
+      sourceHandle,
+      targetHandle,
+    };
+  }
+
+  if (sourceRole === 'input' && targetRole === 'output') {
+    return {
+      source: target,
+      target: source,
+      sourceHandle: targetHandle,
+      targetHandle: sourceHandle,
+    };
+  }
+
+  return null;
+};
+
+const getHandleRole = (handleId: string): 'input' | 'output' | null => {
+  if (handleId.includes('-input')) {
+    return 'input';
+  }
+  if (handleId.includes('-output')) {
+    return 'output';
+  }
+  return null;
 };
 
 const resolveSelectedPageName = (value: unknown) => {

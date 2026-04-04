@@ -137,65 +137,36 @@ button:focus-visible {
 .react-flow__edge .react-flow__edge-path {
   stroke-width: 2.5px;
   fill: none !important;
-  animation: pastel-rainbow-edge-stroke 6s linear infinite;
+  stroke-linecap: round;
+  stroke-dasharray: 14 10;
+  animation:
+    rainbow-edge-run 1.1s linear infinite,
+    rainbow-edge-hue 3.5s linear infinite;
 }
 
 .react-flow__arrowhead polyline,
 .react-flow__arrowhead polyline.arrowclosed {
-  animation: pastel-rainbow-edge-arrow 6s linear infinite;
+  animation: rainbow-edge-hue 3.5s linear infinite;
 }
 
-@keyframes pastel-rainbow-edge-stroke {
+@keyframes rainbow-edge-run {
   0% {
-    stroke: #ffadad;
-  }
-  16% {
-    stroke: #ffd6a5;
-  }
-  33% {
-    stroke: #fdffb6;
-  }
-  50% {
-    stroke: #caffbf;
-  }
-  66% {
-    stroke: #9bf6ff;
-  }
-  83% {
-    stroke: #a0c4ff;
+    stroke-dashoffset: 0;
   }
   100% {
-    stroke: #ffc6ff;
+    stroke-dashoffset: -48;
   }
 }
 
-@keyframes pastel-rainbow-edge-arrow {
+@keyframes rainbow-edge-hue {
   0% {
-    stroke: #ffadad;
-    fill: #ffadad;
-  }
-  16% {
-    stroke: #ffd6a5;
-    fill: #ffd6a5;
-  }
-  33% {
-    stroke: #fdffb6;
-    fill: #fdffb6;
-  }
-  50% {
-    stroke: #caffbf;
-    fill: #caffbf;
-  }
-  66% {
-    stroke: #9bf6ff;
-    fill: #9bf6ff;
-  }
-  83% {
-    stroke: #a0c4ff;
-    fill: #a0c4ff;
+    stroke: #ff4d4d;
+    fill: #ff4d4d;
+    filter: hue-rotate(0deg);
   }
   100% {
-    stroke: #ffc6ff;
-    fill: #ffc6ff;
+    stroke: #ff4d4d;
+    fill: #ff4d4d;
+    filter: hue-rotate(360deg);
   }
 }
