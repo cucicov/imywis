@@ -81,7 +81,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
             />
             <Handle
                 type="source"
-                id={HandleTypes.RED_INPUT}
+                id={HandleTypes.RED_OUTPUT}
                 position={Position.Bottom}
                 style={{
                     width: '10px',
