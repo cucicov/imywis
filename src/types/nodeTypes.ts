@@ -56,6 +56,10 @@ export type BackgroundNodeData = BaseNodeData & {
 
 export type TextNodeData = BaseNodeData & {
     text?: string;
+    color?: string;
+    backgroundColor?: string;
+    transparentBackground?: boolean;
+    align?: 'left' | 'right' | 'center';
     font?: string;
     size?: number;
     width?: number;

@@ -9,6 +9,10 @@ const AddTextNodeButton = () => {
         const data: TextNodeData = {
             label: NODE_TYPES.TEXT,
             text: '',
+            color: '#000000',
+            backgroundColor: '#ffffff',
+            transparentBackground: true,
+            align: 'left',
             font: 'sans-serif',
             size: 16,
             width: 250,

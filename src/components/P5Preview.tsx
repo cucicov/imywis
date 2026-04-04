@@ -719,6 +719,10 @@ const createSceneDrawTasks = ({
     const positionX = toNumberOrNull(textData.positionX) ?? 0;
     const positionY = toNumberOrNull(textData.positionY) ?? 0;
     const opacity = clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1);
+    const color = resolveTextColor(textData.color);
+    const backgroundColor = resolveTextColor(textData.backgroundColor, '#ffffff');
+    const transparentBackground = textData.transparentBackground !== false;
+    const align = resolveTextAlign(textData.align);
 
     tasks.push((target) => {
       drawTextWithDecorations(target, p5Instance, {
@@ -730,6 +734,10 @@ const createSceneDrawTasks = ({
         width,
         height,
         opacity,
+        color,
+        backgroundColor,
+        transparentBackground,
+        align,
         bold: toBoolean(textData.bold),
         italic: toBoolean(textData.italic),
         underline: toBoolean(textData.underline),
@@ -907,6 +915,10 @@ const createTextSurfaceImage = (
   const width = Math.max(1, toNumberOrNull(textData.width) ?? 250);
   const height = Math.max(1, toNumberOrNull(textData.height) ?? 120);
   const opacity = clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1);
+  const color = resolveTextColor(textData.color);
+  const backgroundColor = resolveTextColor(textData.backgroundColor, '#ffffff');
+  const transparentBackground = textData.transparentBackground !== false;
+  const align = resolveTextAlign(textData.align);
 
   const surface = p5Instance.createGraphics(width, height);
   surface.clear(0, 0, 0, 0);
@@ -920,6 +932,10 @@ const createTextSurfaceImage = (
     width,
     height,
     opacity,
+    color,
+    backgroundColor,
+    transparentBackground,
+    align,
     bold: toBoolean(textData.bold),
     italic: toBoolean(textData.italic),
     underline: toBoolean(textData.underline),
@@ -989,6 +1005,10 @@ const createRenderSignature = (
     positionX: item.positionX ?? null,
     positionY: item.positionY ?? null,
     opacity: item.opacity ?? null,
+    color: item.color ?? '#000000',
+    backgroundColor: item.backgroundColor ?? '#ffffff',
+    transparentBackground: item.transparentBackground ?? true,
+    align: item.align ?? 'left',
     bold: item.bold ?? false,
     italic: item.italic ?? false,
     underline: item.underline ?? false,
@@ -1018,19 +1038,38 @@ const drawTextWithDecorations = (
     width: number;
     height: number;
     opacity: number;
+    color: string;
+    backgroundColor: string;
+    transparentBackground: boolean;
+    align: 'left' | 'right' | 'center';
     bold: boolean;
     italic: boolean;
     underline: boolean;
     strikethrough: boolean;
   }
 ) => {
-  const {text, font, size, x, y, width, height, opacity, bold, italic, underline, strikethrough} = options;
+  const {
+    text,
+    font,
+    size,
+    x,
+    y,
+    width,
+    height,
+    opacity,
+    color,
+    backgroundColor,
+    transparentBackground,
+    align,
+    bold,
+    italic,
+    underline,
+    strikethrough
+  } = options;
 
   target.push();
   target.textFont(font);
   target.textSize(size);
-  target.textAlign(p5Instance.LEFT, p5Instance.TOP);
-
   if (bold && italic) {
     target.textStyle(p5Instance.BOLDITALIC);
   } else if (bold) {
@@ -1042,29 +1081,55 @@ const drawTextWithDecorations = (
   }
 
   const alpha = clamp(Math.round(opacity * 255), 0, 255);
+  const textColor = p5Instance.color(color);
+  textColor.setAlpha(alpha);
+  if (!transparentBackground) {
+    const textBackgroundColor = p5Instance.color(backgroundColor);
+    textBackgroundColor.setAlpha(alpha);
+    target.noStroke();
+    target.fill(textBackgroundColor);
+    target.rect(x, y, width, height);
+  }
+
   target.noStroke();
-  target.fill(0, alpha);
+  target.fill(textColor);
 
   const lines = wrapTextLines(target, text, width);
   const lineHeight = size * 1.2;
   const maxLines = Math.max(1, Math.floor(height / lineHeight));
+  const visibleLineCount = Math.min(lines.length, maxLines);
 
-  for (let index = 0; index < Math.min(lines.length, maxLines); index += 1) {
-    const line = lines[index];
-    const lineX = x;
+  for (let index = 0; index < visibleLineCount; index += 1) {
+    const lineData = lines[index];
+    const line = lineData.text;
     const lineY = y + (index * lineHeight);
-    target.text(line, lineX, lineY);
-
+    let lineStartX = x;
+    let lineEndX = x + target.textWidth(line);
+    const alignmentMode = resolveP5TextAlign(p5Instance, align);
+    target.textAlign(alignmentMode, p5Instance.TOP);
     const lineWidth = target.textWidth(line);
+    if (align === 'center') {
+      lineStartX = x + ((width - lineWidth) / 2);
+    } else if (align === 'right') {
+      lineStartX = x + width - lineWidth;
+    }
+    lineEndX = lineStartX + lineWidth;
+    const textX = align === 'center'
+      ? x + (width / 2)
+      : align === 'right'
+        ? x + width
+        : x;
+    target.text(line, textX, lineY);
+
     if (underline || strikethrough) {
       target.push();
-      target.stroke(0, alpha);
+      target.stroke(textColor);
       target.strokeWeight(Math.max(1, size * 0.06));
       if (underline) {
-        target.line(lineX, lineY + size * 1.05, lineX + lineWidth, lineY + size * 1.05);
+        target.line(lineStartX, lineY + size * 1.05, lineEndX, lineY + size * 1.05);
       }
       if (strikethrough) {
-        target.line(lineX, lineY + size * 0.55, lineX + lineWidth, lineY + size * 0.55);
+        target.line(lineStartX, lineY + size * 0.55, lineEndX, lineY + size * 0.55);
       }
       target.pop();
     }
@@ -1075,11 +1140,11 @@ const drawTextWithDecorations = (
 
 const wrapTextLines = (target: p5 | p5.Graphics, text: string, maxWidth: number) => {
   const paragraphs = text.split('\n');
-  const lines: string[] = [];
+  const lines: Array<{text: string; isLastInParagraph: boolean}> = [];
 
   paragraphs.forEach(paragraph => {
     if (!paragraph.trim()) {
-      lines.push('');
+      lines.push({text: '', isLastInParagraph: true});
       return;
     }
 
@@ -1093,19 +1158,45 @@ const wrapTextLines = (target: p5 | p5.Graphics, text: string, maxWidth: number)
         return;
       }
 
-      lines.push(currentLine);
+      lines.push({text: currentLine, isLastInParagraph: false});
       currentLine = word;
     });
 
     if (currentLine) {
-      lines.push(currentLine);
+      lines.push({text: currentLine, isLastInParagraph: true});
     }
   });
 
   return lines;
 };
 
+const resolveTextAlign = (value: unknown): 'left' | 'right' | 'center' => {
+  if (value === 'left' || value === 'right' || value === 'center') {
+    return value;
+  }
+  return 'left';
+};
+
+const resolveP5TextAlign = (p5Instance: p5, align: 'left' | 'right' | 'center') => {
+  if (align === 'center') {
+    return p5Instance.CENTER;
+  }
+  if (align === 'right') {
+    return p5Instance.RIGHT;
+  }
+  return p5Instance.LEFT;
+};
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const resolveTextColor = (value: unknown, fallback = '#000000') => {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  const trimmed = value.trim();
+  return /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(trimmed) ? trimmed : fallback;
+};
 
 const resolvePageBackgroundColor = (value: unknown) => {
   if (typeof value !== 'string') {

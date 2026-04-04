@@ -68,6 +68,15 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
     }, [getEdges, id, setNodes]);
 
+    const onBackgroundColorChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
+        const edges = getEdges();
+        const nextBackgroundColor = evt.target.value;
+        setNodes((nds) => {
+            const withBackgroundColor = updateNodeAndPropagate(nds, edges, id, 'backgroundColor', nextBackgroundColor);
+            return updateNodeAndPropagate(withBackgroundColor, edges, id, 'transparentBackground', false);
+        });
+    }, [getEdges, id, setNodes]);
+
     return (
         <div
             className={`imywis-node-shell${data.connectionImpactKey ? ' imywis-node-shell--impact' : ''}`}
@@ -160,6 +169,46 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                 </div>
 
                 <div style={rowStyle}>
+                    <label htmlFor="field-color" style={rowLabelStyle}>color:</label>
+                    <input
+                        id="field-color"
+                        className="nodrag"
+                        type="color"
+                        value={data.color ?? '#000000'}
+                        onChange={onFieldChange}
+                        style={{...inputStyle, width: '56px', padding: 0, border: '1px solid rgba(0,0,0,0.2)'}}
+                    />
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-backgroundColor" style={rowLabelStyle}>background:</label>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                        <input
+                            id="field-backgroundColor"
+                            className="nodrag"
+                            type="color"
+                            value={data.backgroundColor ?? '#ffffff'}
+                            onChange={onBackgroundColorChange}
+                            style={{...inputStyle, width: '56px', padding: 0, border: '1px solid rgba(0,0,0,0.2)'}}
+                        />
+                        <label
+                            htmlFor="field-transparentBackground"
+                            style={{fontSize: '10px', color: '#792D05', display: 'flex', alignItems: 'center', gap: '4px'}}
+                        >
+                            <input
+                                id="field-transparentBackground"
+                                className="nodrag"
+                                type="checkbox"
+                                checked={data.transparentBackground !== false}
+                                onChange={onFieldChange}
+                                style={{width: '14px', height: '14px', accentColor: '#792D05', opacity: 0.8}}
+                            />
+                            transparent bg
+                        </label>
+                    </div>
+                </div>
+
+                <div style={rowStyle}>
                     <label htmlFor="field-font" style={rowLabelStyle}>font:</label>
                     <div style={controlStackStyle}>
                         <select
@@ -193,6 +242,21 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                             ))}
                         </div>
                     </div>
+                </div>
+
+                <div style={rowStyle}>
+                    <label htmlFor="field-align" style={rowLabelStyle}>align:</label>
+                    <select
+                        id="field-align"
+                        className="nodrag"
+                        value={data.align ?? 'left'}
+                        onChange={onFieldChange}
+                        style={inputStyle}
+                    >
+                        <option value="left">left</option>
+                        <option value="right">right</option>
+                        <option value="center">center</option>
+                    </select>
                 </div>
 
                 <div style={rowStyle}>
