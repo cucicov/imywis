@@ -37,7 +37,7 @@ const rowLabelStyle: CSSProperties = {
 const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.EVENT>>) => {
     const {setNodes, getEdges} = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
-    const [fieldsExpanded, setFieldsExpanded] = useState(true);
+    const fieldsExpanded = data.collapsed !== true;
 
     const onFieldChange = useCallback((evt: ChangeEvent<HTMLSelectElement>) => {
         const {id: targetId, value} = evt.target;
@@ -46,6 +46,20 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, value));
     }, [getEdges, id, setNodes]);
+
+    const onToggleFields = useCallback(() => {
+        setNodes((nds) => nds.map((node) => (
+            node.id === id
+                ? {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        collapsed: fieldsExpanded,
+                    },
+                }
+                : node
+        )));
+    }, [fieldsExpanded, id, setNodes]);
 
     return (
         <div
@@ -97,7 +111,7 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
 
             <div
                 className="nodrag"
-                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                onClick={onToggleFields}
                 style={{
                     marginTop: '6px',
                     color: '#fff',

@@ -16,7 +16,7 @@ const numberInputStyle = { fontSize: '11px', width: '90px', border: 0, backgroun
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
-    const [fieldsExpanded, setFieldsExpanded] = useState(true);
+    const fieldsExpanded = data.collapsed !== true;
     const isFirstPage = id === '1';
     const widthNumericValue = toFiniteNumber(data.width, 0);
     const heightNumericValue = toFiniteNumber(data.height, 0);
@@ -39,6 +39,20 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, 'height', Math.round(nextValue)));
     }, [getEdges, id, setNodes]);
+
+    const onToggleFields = useCallback(() => {
+        setNodes((nds) => nds.map((node) => (
+            node.id === id
+                ? {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        collapsed: fieldsExpanded,
+                    },
+                }
+                : node
+        )));
+    }, [fieldsExpanded, id, setNodes]);
 
     return (
         <div
@@ -98,7 +112,7 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
             </div>
             <div
                 className="nodrag"
-                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                onClick={onToggleFields}
                 style={{
                     marginTop: '6px',
                     color: '#fff',

@@ -1,5 +1,5 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
-import {useCallback, useState, type ChangeEvent, type CSSProperties} from 'react';
+import {useCallback, type ChangeEvent, type CSSProperties} from 'react';
 import {updateNodeAndPropagate} from '../../utils/nodeUtils.ts';
 import {NODE_TYPES, type ExternalLinkNodeData} from '../../types/nodeTypes';
 import {HandleTypes} from '../../types/handleTypes';
@@ -35,15 +35,29 @@ const rowLabelStyle: CSSProperties = {
 
 const ExternalLinkNode = ({id, data}: NodeProps<Node<ExternalLinkNodeData, typeof NODE_TYPES.EXTERNAL_LINK>>) => {
     const {setNodes, getEdges} = useReactFlow();
-    const [fieldsExpanded, setFieldsExpanded] = useState(true);
+    const fieldsExpanded = data.collapsed !== true;
 
-    const onFieldChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
+    const onFieldChange = useCallback((evt: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const {id: targetId, value} = evt.target;
         const field = targetId.replace('field-', '');
 
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, value));
     }, [getEdges, id, setNodes]);
+
+    const onToggleFields = useCallback(() => {
+        setNodes((nds) => nds.map((node) => (
+            node.id === id
+                ? {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        collapsed: fieldsExpanded,
+                    },
+                }
+                : node
+        )));
+    }, [fieldsExpanded, id, setNodes]);
 
     return (
         <div
@@ -73,7 +87,7 @@ const ExternalLinkNode = ({id, data}: NodeProps<Node<ExternalLinkNodeData, typeo
 
             <div
                 className="nodrag"
-                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                onClick={onToggleFields}
                 style={{
                     marginTop: '6px',
                     color: '#fff',
@@ -100,6 +114,19 @@ const ExternalLinkNode = ({id, data}: NodeProps<Node<ExternalLinkNodeData, typeo
                             onChange={onFieldChange}
                             style={inputStyle}
                         />
+                    </div>
+                    <div style={rowStyle}>
+                        <label htmlFor="field-target" style={rowLabelStyle}>target:</label>
+                        <select
+                            id="field-target"
+                            className="nodrag"
+                            value={data.target ?? '_self'}
+                            onChange={onFieldChange}
+                            style={inputStyle}
+                        >
+                            <option value="_self">_self</option>
+                            <option value="_blank">_blank</option>
+                        </select>
                     </div>
                 </div>
             )}

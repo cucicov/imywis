@@ -54,7 +54,7 @@ const numberInputStyle: CSSProperties = {
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
-    const [fieldsExpanded, setFieldsExpanded] = useState(true);
+    const fieldsExpanded = data.collapsed !== true;
     const [previewErrorPath, setPreviewErrorPath] = useState<string | null>(null);
     const hasPreviewError = previewErrorPath === data.path;
     const widthNumericValue = toFiniteNumber(data.width, 100);
@@ -75,6 +75,20 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
     }, [getEdges, id, setNodes]);
+
+    const onToggleFields = useCallback(() => {
+        setNodes((nds) => nds.map((node) => (
+            node.id === id
+                ? {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        collapsed: fieldsExpanded,
+                    },
+                }
+                : node
+        )));
+    }, [fieldsExpanded, id, setNodes]);
 
     return (
         <div
@@ -175,7 +189,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
             )}
             <div
                 className="nodrag"
-                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                onClick={onToggleFields}
                 style={{
                     marginTop: '6px',
                     color: '#fff',

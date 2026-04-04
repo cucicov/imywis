@@ -62,7 +62,7 @@ const controlStackStyle: CSSProperties = {
 const BackgroundNode = ({id, data}: NodeProps<Node<BackgroundNodeData, typeof NODE_TYPES.BACKGROUND>>) => {
     const {setNodes, getEdges} = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
-    const [fieldsExpanded, setFieldsExpanded] = useState(true);
+    const fieldsExpanded = data.collapsed !== true;
     const widthNumericValue = toFiniteNumber(data.width, 100);
     const heightNumericValue = toFiniteNumber(data.height, 100);
 
@@ -82,6 +82,20 @@ const BackgroundNode = ({id, data}: NodeProps<Node<BackgroundNodeData, typeof NO
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
     }, [getEdges, id, setNodes]);
+
+    const onToggleFields = useCallback(() => {
+        setNodes((nds) => nds.map((node) => (
+            node.id === id
+                ? {
+                    ...node,
+                    data: {
+                        ...node.data,
+                        collapsed: fieldsExpanded,
+                    },
+                }
+                : node
+        )));
+    }, [fieldsExpanded, id, setNodes]);
 
     return (
         <div
@@ -121,7 +135,7 @@ const BackgroundNode = ({id, data}: NodeProps<Node<BackgroundNodeData, typeof NO
 
             <div
                 className="nodrag"
-                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                onClick={onToggleFields}
                 style={{
                     marginTop: '6px',
                     color: '#fff',

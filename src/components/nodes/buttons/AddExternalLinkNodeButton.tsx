@@ -9,6 +9,7 @@ const AddExternalLinkNodeButton = () => {
         const data: ExternalLinkNodeData = {
             label: NODE_TYPES.EXTERNAL_LINK,
             url: '',
+            target: '_self',
         };
 
         const currentNodes = getNodes();

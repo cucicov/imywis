@@ -21,6 +21,7 @@ export type NodeMetadata = {
 type BaseNodeData = {
     label: string;
     connectionImpactKey?: number;
+    collapsed?: boolean;
 };
 
 export type PageNodeData = BaseNodeData & {
@@ -85,5 +86,6 @@ export type EventNodeData = BaseNodeData & {
 
 export type ExternalLinkNodeData = BaseNodeData & {
     url?: string;
+    target?: '_self' | '_blank';
     metadata?: NodeMetadata;
 };
