@@ -29,6 +29,8 @@ import TextNode from './nodes/TextNode.tsx';
 import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
 import EventNode from './nodes/EventNode.tsx';
 import AddEventNodeButton from './nodes/buttons/AddEventNodeButton.tsx';
+import ExternalLinkNode from './nodes/ExternalLinkNode.tsx';
+import AddExternalLinkNodeButton from './nodes/buttons/AddExternalLinkNodeButton.tsx';
 import LatestSelectedPageNameBadge from './nodes/buttons/LatestSelectedPageNameBadge.tsx';
 import {
   getLatestSelectedPageNameFromSession,
@@ -41,6 +43,7 @@ const nodeTypes = {
   backgroundNode: BackgroundNode,
   textNode: TextNode,
   eventNode: EventNode,
+  externalLinkNode: ExternalLinkNode,
 };
 
 const initialNodes = [
@@ -327,6 +330,7 @@ const FlowCanvas = () => {
           <AddBackgroundNodeButton />
           <AddTextNodeButton />
           <AddEventNodeButton />
+          <AddExternalLinkNodeButton />
           <LatestSelectedPageNameBadge pageName={latestSelectedPageName} />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>
