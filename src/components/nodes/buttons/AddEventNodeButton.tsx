@@ -15,9 +15,16 @@ const AddEventNodeButton = () => {
         const maxId = currentNodes.length > 0 ? Math.max(...currentNodes.map(item => Number(item.id) || 0)) : 0;
         const {width, height, transform} = store.getState();
         const [translateX, translateY, zoom] = transform;
+        const flowScrollContainer = document.getElementById('imywis-flow-scroll-container');
+        const viewportCenterX = flowScrollContainer
+            ? flowScrollContainer.scrollLeft + (flowScrollContainer.clientWidth / 2)
+            : width / 2;
+        const viewportCenterY = flowScrollContainer
+            ? flowScrollContainer.scrollTop + (flowScrollContainer.clientHeight / 2)
+            : height / 2;
         const centerPosition = {
-            x: (width / 2 - translateX) / zoom,
-            y: (height / 2 - translateY) / zoom,
+            x: (viewportCenterX - translateX) / zoom,
+            y: (viewportCenterY - translateY) / zoom,
         };
 
         const newNode = {

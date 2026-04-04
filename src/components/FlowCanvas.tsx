@@ -296,7 +296,7 @@ const FlowCanvas = () => {
   }, [edges, nodes]);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}>
+    <div id="imywis-flow-scroll-container" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}>
       <div
         style={{
           width: `${sceneSize.width}px`,
