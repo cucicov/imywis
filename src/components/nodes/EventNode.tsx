@@ -37,6 +37,7 @@ const rowLabelStyle: CSSProperties = {
 const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.EVENT>>) => {
     const {setNodes, getEdges} = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
+    const [fieldsExpanded, setFieldsExpanded] = useState(true);
 
     const onFieldChange = useCallback((evt: ChangeEvent<HTMLSelectElement>) => {
         const {id: targetId, value} = evt.target;
@@ -94,58 +95,77 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
                 }}
             />
 
-            <b>{data.label + '-' + id}</b>
-            <div style={{marginTop: '6px'}}>
-                <div style={rowStyle}>
-                    <label htmlFor="field-type" style={rowLabelStyle}>type:</label>
-                    <select
-                        id="field-type"
-                        className="nodrag"
-                        value={data.type ?? 'click'}
-                        onChange={onFieldChange}
-                        style={inputStyle}
-                    >
-                        <option value="click">click</option>
-                        <option value="mouse over">mouse over</option>
-                    </select>
-                </div>
+            <div
+                className="nodrag"
+                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                style={{
+                    marginTop: '6px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                }}
+            >
+                <span>{fieldsExpanded ? '▼' : '▶'}</span>
+                <b>{data.label + '-' + id}</b>
             </div>
-
-            {data.metadata && data.metadata.sourceNodes.length > 0 && (
-                <div style={{marginTop: '10px', padding: '5px', background: 'rgba(0,0,0,0.2)', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.25)'}}>
-                    <div
-                        className="nodrag"
-                        onClick={() => setMetadataExpanded(!metadataExpanded)}
-                        style={{
-                            fontSize: '9px',
-                            fontWeight: 'bold',
-                            marginBottom: metadataExpanded ? '5px' : '0',
-                            color: '#fff',
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                        }}
-                    >
-                        <span>{metadataExpanded ? '▼' : '▶'}</span>
-                        <span>Metadata ({data.metadata.sourceNodes.length})</span>
-                    </div>
-                    {metadataExpanded && data.metadata.sourceNodes.map((source, idx) => (
-                        <div key={idx} style={{fontSize: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.08)', padding: '4px', borderRadius: '3px'}}>
-                            <div style={{marginBottom: '2px'}}><b>Node:</b> {source.type} ({source.nodeId})</div>
-                            <div style={{marginBottom: '3px'}}><b>Handle:</b> {source.handleType}</div>
-                            <div style={{borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px'}}>
-                                <div style={{fontWeight: 'bold', marginBottom: '2px'}}>Data:</div>
-                                {Object.entries(source.data).map(([key, value]) => (
-                                    <div key={key} style={{marginLeft: '5px', lineHeight: '1.4'}}>
-                                        <b>{key}:</b> {JSON.stringify(value)}
-                                    </div>
-                                ))}
-                            </div>
+            {fieldsExpanded && (
+                <>
+                    <div style={{marginTop: '6px'}}>
+                        <div style={rowStyle}>
+                            <label htmlFor="field-type" style={rowLabelStyle}>type:</label>
+                            <select
+                                id="field-type"
+                                className="nodrag"
+                                value={data.type ?? 'click'}
+                                onChange={onFieldChange}
+                                style={inputStyle}
+                            >
+                                <option value="click">click</option>
+                                <option value="mouse over">mouse over</option>
+                            </select>
                         </div>
-                    ))}
-                </div>
+                    </div>
+
+                    {data.metadata && data.metadata.sourceNodes.length > 0 && (
+                        <div style={{marginTop: '10px', padding: '5px', background: 'rgba(0,0,0,0.2)', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.25)'}}>
+                            <div
+                                className="nodrag"
+                                onClick={() => setMetadataExpanded(!metadataExpanded)}
+                                style={{
+                                    fontSize: '9px',
+                                    fontWeight: 'bold',
+                                    marginBottom: metadataExpanded ? '5px' : '0',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                }}
+                            >
+                                <span>{metadataExpanded ? '▼' : '▶'}</span>
+                                <span>Metadata ({data.metadata.sourceNodes.length})</span>
+                            </div>
+                            {metadataExpanded && data.metadata.sourceNodes.map((source, idx) => (
+                                <div key={idx} style={{fontSize: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.08)', padding: '4px', borderRadius: '3px'}}>
+                                    <div style={{marginBottom: '2px'}}><b>Node:</b> {source.type} ({source.nodeId})</div>
+                                    <div style={{marginBottom: '3px'}}><b>Handle:</b> {source.handleType}</div>
+                                    <div style={{borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px'}}>
+                                        <div style={{fontWeight: 'bold', marginBottom: '2px'}}>Data:</div>
+                                        {Object.entries(source.data).map(([key, value]) => (
+                                            <div key={key} style={{marginLeft: '5px', lineHeight: '1.4'}}>
+                                                <b>{key}:</b> {JSON.stringify(value)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );

@@ -16,6 +16,7 @@ const numberInputStyle = { fontSize: '11px', width: '90px', border: 0, backgroun
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
+    const [fieldsExpanded, setFieldsExpanded] = useState(true);
     const isFirstPage = id === '1';
     const widthNumericValue = toFiniteNumber(data.width, 0);
     const heightNumericValue = toFiniteNumber(data.height, 0);
@@ -75,7 +76,6 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                     border: '1px solid white'}}
             />
 
-            <b>{data.label + "-" + id}</b>
             <div style={{display: 'flex', flexDirection: 'column', gap: '7px', marginTop: '6px'}}>
                 <div style={rowStyle}>
                     <label style={rowLabelStyle}>name:</label>
@@ -95,118 +95,140 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                         />
                     </div>
                 </div>
-                <div style={rowStyle}>
-                    <label style={rowLabelStyle}>width(px):</label>
-                    <div style={controlStackStyle}>
-                        <input
-                            id="field-width"
-                            className="nodrag"
-                            type="number"
-                            value={data.width ?? ''}
-                            onChange={onTextChange}
-                            style={numberInputStyle}
-                        />
-                        <CumulativeCenterSlider
-                            showValuePreview={false}
-                            className="nodrag nopan nowheel"
-                            cumulativeValue={widthNumericValue}
-                            minCumulativeValue={1}
-                            onCumulativeChange={onSliderCumulativeChange}
-                        />
-                    </div>
-                </div>
-                <div style={rowStyle}>
-                    <label style={rowLabelStyle}>height(px):</label>
-                    <div style={controlStackStyle}>
-                        <input
-                            id="field-height"
-                            className="nodrag"
-                            type="number"
-                            value={data.height ?? ''}
-                            onChange={onTextChange}
-                            style={numberInputStyle}
-                        />
-                        <CumulativeCenterSlider
-                            showValuePreview={false}
-                            className="nodrag nopan nowheel"
-                            cumulativeValue={heightNumericValue}
-                            minCumulativeValue={1}
-                            onCumulativeChange={onHeightSliderCumulativeChange}
-                        />
-                    </div>
-                </div>
-                <div style={rowStyle}>
-                    <label style={rowLabelStyle}>mousePointer:</label>
-                    <div style={controlStackStyle}>
-                        <input
-                            id="field-mousePointer"
-                            className="nodrag"
-                            type="text"
-                            value={data.mousePointer ?? ''}
-                            onChange={onTextChange}
-                            style={textInputStyle}
-                        />
-                    </div>
-                </div>
-                <div style={rowStyle}>
-                    <label style={rowLabelStyle}>background:</label>
-                    <div style={controlStackStyle}>
-                        <input
-                            id="field-backgroundColor"
-                            className="nodrag"
-                            type="color"
-                            value={data.backgroundColor ?? '#ffffff'}
-                            onChange={onTextChange}
-                            style={{ width: '40px', height: '22px', border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
-                        />
-                    </div>
-                </div>
             </div>
-            
-            {data.metadata && data.metadata.sourceNodes.length > 0 && (
-                <div style={{ marginTop: '10px', padding: '5px', background: 'rgba(0,0,0,0.15)', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.3)' }}>
-                    <div 
-                        className="nodrag"
-                        onClick={() => setMetadataExpanded(!metadataExpanded)}
-                        style={{ 
-                            fontSize: '9px', 
-                            fontWeight: 'bold', 
-                            marginBottom: metadataExpanded ? '5px' : '0', 
-                            color: '#fff',
-                            cursor: 'pointer',
-                            userSelect: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px'
-                        }}
-                    >
-                        <span>{metadataExpanded ? '▼' : '▶'}</span>
-                        <span>📦 Metadata ({data.metadata.sourceNodes.length})</span>
-                    </div>
-                    {metadataExpanded && data.metadata.sourceNodes.map((source, idx) => (
-                        <div key={idx} style={{ fontSize: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '3px' }}>
-                            <div style={{ marginBottom: '2px' }}><b>Node:</b> {source.type} ({source.nodeId})</div>
-                            <div style={{ marginBottom: '3px' }}><b>Handle:</b> {source.handleType}</div>
-                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
-                                <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Data:</div>
-                                {Object.entries(source.data).map(([key, value]) => (
-                                    key === 'metadata' ? (
-                                        <div key={key} style={{ marginLeft: '5px', marginTop: '3px', padding: '3px', background: 'rgba(255,200,0,0.2)', borderRadius: '2px', border: '1px solid rgba(255,200,0,0.5)' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#FFD700' }}>🔗 Nested Metadata:</div>
-                                            <pre style={{ margin: '2px 0 0 0', fontSize: '7px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                                                {JSON.stringify(value, null, 2)}
-                                            </pre>
-                                        </div>
-                                    ) : (
-                                        <div key={key} style={{ marginLeft: '5px', lineHeight: '1.4' }}>
-                                            <b>{key}:</b> {JSON.stringify(value)}
-                                        </div>
-                                    )
-                                ))}
+            <div
+                className="nodrag"
+                onClick={() => setFieldsExpanded(!fieldsExpanded)}
+                style={{
+                    marginTop: '6px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                }}
+            >
+                <span>{fieldsExpanded ? '▼' : '▶'}</span>
+                <b>{data.label + "-" + id}</b>
+            </div>
+            {fieldsExpanded && (
+                <>
+                    <div style={{display: 'flex', flexDirection: 'column', gap: '7px', marginTop: '6px'}}>
+                        <div style={rowStyle}>
+                            <label style={rowLabelStyle}>width(px):</label>
+                            <div style={controlStackStyle}>
+                                <input
+                                    id="field-width"
+                                    className="nodrag"
+                                    type="number"
+                                    value={data.width ?? ''}
+                                    onChange={onTextChange}
+                                    style={numberInputStyle}
+                                />
+                                <CumulativeCenterSlider
+                                    showValuePreview={false}
+                                    className="nodrag nopan nowheel"
+                                    cumulativeValue={widthNumericValue}
+                                    minCumulativeValue={1}
+                                    onCumulativeChange={onSliderCumulativeChange}
+                                />
                             </div>
                         </div>
-                    ))}
-                </div>
+                        <div style={rowStyle}>
+                            <label style={rowLabelStyle}>height(px):</label>
+                            <div style={controlStackStyle}>
+                                <input
+                                    id="field-height"
+                                    className="nodrag"
+                                    type="number"
+                                    value={data.height ?? ''}
+                                    onChange={onTextChange}
+                                    style={numberInputStyle}
+                                />
+                                <CumulativeCenterSlider
+                                    showValuePreview={false}
+                                    className="nodrag nopan nowheel"
+                                    cumulativeValue={heightNumericValue}
+                                    minCumulativeValue={1}
+                                    onCumulativeChange={onHeightSliderCumulativeChange}
+                                />
+                            </div>
+                        </div>
+                        <div style={rowStyle}>
+                            <label style={rowLabelStyle}>mousePointer:</label>
+                            <div style={controlStackStyle}>
+                                <input
+                                    id="field-mousePointer"
+                                    className="nodrag"
+                                    type="text"
+                                    value={data.mousePointer ?? ''}
+                                    onChange={onTextChange}
+                                    style={textInputStyle}
+                                />
+                            </div>
+                        </div>
+                        <div style={rowStyle}>
+                            <label style={rowLabelStyle}>background:</label>
+                            <div style={controlStackStyle}>
+                                <input
+                                    id="field-backgroundColor"
+                                    className="nodrag"
+                                    type="color"
+                                    value={data.backgroundColor ?? '#ffffff'}
+                                    onChange={onTextChange}
+                                    style={{ width: '40px', height: '22px', border: 0, background: 'transparent', padding: 0, cursor: 'pointer' }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {data.metadata && data.metadata.sourceNodes.length > 0 && (
+                        <div style={{ marginTop: '10px', padding: '5px', background: 'rgba(0,0,0,0.15)', borderRadius: '5px', border: '1px solid rgba(255,255,255,0.3)' }}>
+                            <div
+                                className="nodrag"
+                                onClick={() => setMetadataExpanded(!metadataExpanded)}
+                                style={{
+                                    fontSize: '9px',
+                                    fontWeight: 'bold',
+                                    marginBottom: metadataExpanded ? '5px' : '0',
+                                    color: '#fff',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px'
+                                }}
+                            >
+                                <span>{metadataExpanded ? '▼' : '▶'}</span>
+                                <span>📦 Metadata ({data.metadata.sourceNodes.length})</span>
+                            </div>
+                            {metadataExpanded && data.metadata.sourceNodes.map((source, idx) => (
+                                <div key={idx} style={{ fontSize: '8px', marginBottom: '5px', background: 'rgba(255,255,255,0.1)', padding: '4px', borderRadius: '3px' }}>
+                                    <div style={{ marginBottom: '2px' }}><b>Node:</b> {source.type} ({source.nodeId})</div>
+                                    <div style={{ marginBottom: '3px' }}><b>Handle:</b> {source.handleType}</div>
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.2)', paddingTop: '3px' }}>
+                                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Data:</div>
+                                        {Object.entries(source.data).map(([key, value]) => (
+                                            key === 'metadata' ? (
+                                                <div key={key} style={{ marginLeft: '5px', marginTop: '3px', padding: '3px', background: 'rgba(255,200,0,0.2)', borderRadius: '2px', border: '1px solid rgba(255,200,0,0.5)' }}>
+                                                    <div style={{ fontWeight: 'bold', color: '#FFD700' }}>🔗 Nested Metadata:</div>
+                                                    <pre style={{ margin: '2px 0 0 0', fontSize: '7px', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                                                        {JSON.stringify(value, null, 2)}
+                                                    </pre>
+                                                </div>
+                                            ) : (
+                                                <div key={key} style={{ marginLeft: '5px', lineHeight: '1.4' }}>
+                                                    <b>{key}:</b> {JSON.stringify(value)}
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
