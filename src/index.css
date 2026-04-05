@@ -149,6 +149,23 @@ button:focus-visible {
   animation: rainbow-edge-hue 3.5s linear infinite;
 }
 
+.imywis-animations-disabled .react-flow__edge .react-flow__edge-path,
+.imywis-animations-disabled .react-flow__arrowhead polyline,
+.imywis-animations-disabled .react-flow__arrowhead polyline.arrowclosed {
+  animation: none !important;
+}
+
+.imywis-animations-disabled .imywis-node-shell--impact,
+.imywis-animations-disabled .imywis-node-shell--impact::before,
+.imywis-animations-disabled .imywis-node-shell--impact::after {
+  animation: none !important;
+}
+
+.imywis-animations-disabled .imywis-node-shell--impact::before,
+.imywis-animations-disabled .imywis-node-shell--impact::after {
+  content: none !important;
+}
+
 @keyframes rainbow-edge-run {
   0% {
     stroke-dashoffset: 0;

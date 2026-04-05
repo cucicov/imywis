@@ -61,6 +61,7 @@ const initialEdges: Edge[] = [];
 const FlowCanvas = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const previousMetadataSignatureByNodeIdRef = useRef<Map<string, string>>(new Map());
   const [viewportSize, setViewportSize] = useState(() => ({
@@ -158,6 +159,29 @@ const FlowCanvas = () => {
 
   // Trigger impact animation whenever a node metadata payload changes
   useEffect(() => {
+    if (!animationsEnabled) {
+      setNodes((currentNodes) => {
+        let hasChanges = false;
+        const nextNodes = currentNodes.map((node) => {
+          if (!node.data.connectionImpactKey) {
+            return node;
+          }
+
+          hasChanges = true;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              connectionImpactKey: undefined,
+            },
+          };
+        });
+
+        return hasChanges ? nextNodes : currentNodes;
+      });
+      return;
+    }
+
     const currentSignatures = new Map<string, string>();
     const impactedNodeIds: string[] = [];
 
@@ -213,7 +237,7 @@ const FlowCanvas = () => {
         };
       }));
     }, 520);
-  }, [nodes, setNodes]);
+  }, [animationsEnabled, nodes, setNodes]);
 
   useEffect(() => {
     const updateViewportSize = () => {
@@ -299,7 +323,11 @@ const FlowCanvas = () => {
   }, [edges, nodes]);
 
   return (
-    <div id="imywis-flow-scroll-container" style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}>
+    <div
+      id="imywis-flow-scroll-container"
+      className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
+      style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}
+    >
       <div
         style={{
           width: `${sceneSize.width}px`,
@@ -309,6 +337,26 @@ const FlowCanvas = () => {
           position: 'relative',
         }}
       >
+        <button
+          type="button"
+          onClick={() => setAnimationsEnabled((value) => !value)}
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: '328px',
+            zIndex: 1000,
+            borderRadius: '6px',
+            border: '1px solid #8a8a8a',
+            backgroundColor: animationsEnabled ? '#f3f7ff' : '#f5f5f5',
+            color: '#202020',
+            padding: '8px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+          }}
+        >
+          {animationsEnabled ? 'Animations: ON' : 'Animations: OFF'}
+        </button>
         <ExportP5Project nodes={nodes} />
         <ReactFlow
           nodes={nodes}
