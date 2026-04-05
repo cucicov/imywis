@@ -7,6 +7,7 @@ import {
   type Edge,
   type Node,
 } from '@xyflow/react';
+import {type AppUIProps} from '../types/supabaseTypes.ts';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -58,7 +59,7 @@ const initialNodes = [
 const initialEdges: Edge[] = [];
 
 
-const FlowCanvas = () => {
+const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
@@ -328,6 +329,10 @@ const FlowCanvas = () => {
       className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
       style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}
     >
+      <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '16px'}}>
+        <p style={{fontSize: '10px'}}>{session.user.email}</p>
+        <button onClick={handleLogout} style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}>Logout</button>
+      </div>
       <div
         style={{
           width: `${sceneSize.width}px`,
