@@ -2,14 +2,29 @@ import {useState, type CSSProperties} from 'react';
 import type {Node} from '@xyflow/react';
 import {NODE_TYPES, type PageNodeData} from '../types/nodeTypes';
 import {APP_CONFIG} from '../config/appConfig';
+import type {Session} from "@supabase/supabase-js";
+import {supabase} from "../utils/supabaseClient.ts";
 
 type ExportP5ProjectProps = {
     nodes: Node[];
+    session: Session;
 };
 
 type ExportResponse = {
     success?: boolean;
     message?: string;
+};
+
+type UserHandleRow = {
+    handle?: string | null;
+    user_handle?: string | null;
+};
+
+type SerializablePageData = {
+    id: string;
+    type: string | undefined;
+    position: Node['position'];
+    data: PageNodeData;
 };
 
 const buttonStyle: CSSProperties = {
@@ -93,14 +108,64 @@ const statusChipStyle: CSSProperties = {
     color: '#fff',
 };
 
-const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
+const ExportP5Project = ({nodes, session}: ExportP5ProjectProps) => {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [statusType, setStatusType] = useState<'success' | 'error' | null>(null);
 
-    const openOrRefreshPreviewTab = () => {
-        const previewTab = window.open(APP_CONFIG.publishRedirectUrl, 'p5-preview-tab');
+    const openOrRefreshPreviewTab = (userHandle: string) => {
+        const publishBaseUrl = new URL(APP_CONFIG.publishRedirectUrl);
+        const targetUrl = new URL(`/${encodeURIComponent(userHandle)}`, publishBaseUrl.origin).toString();
+        const previewTab = window.open(targetUrl, 'p5-preview-tab');
         previewTab?.focus();
+    };
+
+    const getUserHandle = async (userId: string): Promise<string> => {
+        const fetchByColumn = async (column: 'user_id') => {
+            const {data, error} = await supabase
+                .from('user_profiles')
+                .select('handle')
+                .eq(column, userId)
+                .maybeSingle<UserHandleRow>();
+
+            if (error) {
+                throw error;
+            }
+
+            if (!data) {
+                return null;
+            }
+
+            return data.handle ?? null;
+        };
+
+        try {
+            const byUserId = await fetchByColumn('user_id');
+            if (byUserId) {
+                return byUserId;
+            }
+        } catch (error) {
+            console.warn('Failed to fetch handle by user_id, trying id fallback:', error);
+        }
+
+        throw new Error('No user handle found in public.user_profiles for current user.');
+    };
+
+    const savePagesDataToUserProfile = async (userId: string, pagesData: SerializablePageData[]) => {
+
+        const {data: byUserIdData, error: byUserIdError} = await supabase
+            .from('user_profiles')
+            .update({data: pagesData})
+            .eq('user_id', userId);
+
+        if (byUserIdError) {
+            console.error('Error updating profile data by user_id:', byUserIdError);
+            throw new Error(`Failed to update profile data by user_id: ${byUserIdError.message}`);
+        }
+
+        if (byUserIdData) {
+            return;
+        }
     };
 
     const onExport = async () => {
@@ -111,7 +176,7 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
 
             const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
 
-            const pagesData = pageNodes.map(pageNode => {
+            const pagesData: SerializablePageData[] = pageNodes.map(pageNode => {
                 const pageData = pageNode.data as PageNodeData;
 
                 return {
@@ -122,14 +187,22 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
                 };
             });
 
-            console.log('Exporting pages:', JSON.stringify(pagesData));
+            const userHandle = await getUserHandle(session.user.id);
+
+            const exportPayload = {
+                userid: session.user.id,
+                userHandle,
+                pagesData,
+            };
+
+            console.log('Exporting pages:', JSON.stringify(exportPayload));
 
             const response = await fetch(APP_CONFIG.nodesApiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify(pagesData),
+                body: JSON.stringify(exportPayload),
             });
 
             let payload: ExportResponse | null = null;
@@ -147,9 +220,11 @@ const ExportP5Project = ({nodes}: ExportP5ProjectProps) => {
                 return;
             }
 
-            setStatusMessage(payload?.message ?? 'Nodes processed successfully');
+            await savePagesDataToUserProfile(session.user.id, pagesData);
+
+            setStatusMessage(payload?.message ?? 'Nodes processed successfully and profile data updated');
             setStatusType('success');
-            openOrRefreshPreviewTab();
+            openOrRefreshPreviewTab(userHandle);
         } catch (error) {
             setStatusMessage(
                 error instanceof Error

@@ -362,7 +362,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         >
           {animationsEnabled ? 'Animations: ON' : 'Animations: OFF'}
         </button>
-        <ExportP5Project nodes={nodes} />
+        <ExportP5Project nodes={nodes} session={session}/>
         <ReactFlow
           nodes={nodes}
           edges={edges}
