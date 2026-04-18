@@ -22,6 +22,7 @@ This changelog tracks public releases and delivered changes.
 
 ### Fixed
 - User handle sanitization → remove any non alphanumeric characters from the user email handle.
+- Fixed nodes disappearing when adding an event and a page node subsequently.
 
 ### Removed
 

@@ -16,6 +16,8 @@ const AddPageNodeButton = () => {
             backgroundColor: '#ffffff'
         };
         const { width, height, transform } = store.getState();
+
+        const maxId = getNodes().length > 0 ? Math.max(...getNodes().map(item => Number(item.id) || 0)) : 0;
         const [translateX, translateY, zoom] = transform;
         const flowScrollContainer = document.getElementById('imywis-flow-scroll-container');
         const viewportCenterX = flowScrollContainer
@@ -30,7 +32,7 @@ const AddPageNodeButton = () => {
         };
 
         const newNode = {
-            id: `${getNodes().length + 1}`,
+            id: `${maxId + 1}`,
             type: 'pageNode',
             data,
             position: centerPosition,
