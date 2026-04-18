@@ -40,6 +40,7 @@ import {
 import {supabase} from '../utils/supabaseClient.ts';
 import AutosaveToggle from './AutosaveToggle.tsx';
 import {getLocalImageDataUrl} from '../utils/localImageCache.ts';
+import ChangeLogPopUp from './ChangeLogPopUp.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -413,6 +414,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           position: 'relative',
         }}
       >
+        <ChangeLogPopUp />
         <button
           type="button"
           onClick={() => setAnimationsEnabled((value) => !value)}
