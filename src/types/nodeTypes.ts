@@ -36,6 +36,8 @@ export type PageNodeData = BaseNodeData & {
 
 export type ImageNodeData = BaseNodeData & {
     path?: string;
+    localImageDataUrl?: string;
+    localImageFileName?: string;
     width?: number;
     height?: number;
     autoWidth?: boolean;

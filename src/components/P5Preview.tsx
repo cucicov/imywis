@@ -240,9 +240,10 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
 
         const newImageData = imageNodeMetadata.data as Partial<ImageNodeData>;
         let loadedImage: p5.Image | null = null;
+        const imageSourcePath = getImageSourcePath(newImageData);
 
-        if (newImageData.path && p5InstanceRef.current) {
-          const imagePath = withCorsProxy(newImageData.path);
+        if (imageSourcePath && p5InstanceRef.current) {
+          const imagePath = withCorsProxy(imageSourcePath);
           const cachedImage = imageCacheRef.current.get(imagePath);
           if (cachedImage) {
             loadedImage = cachedImage;
@@ -292,10 +293,11 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
 
         let sourceType: typeof NODE_TYPES.IMAGE | typeof NODE_TYPES.TEXT | null = null;
         let loadedImage: BackgroundRenderableImage | null = null;
+        const sourceImagePath = getImageSourcePath(sourceImageData);
 
-        if (sourceImageMetadata && sourceImageData?.path && p5InstanceRef.current) {
+        if (sourceImageMetadata && sourceImagePath && p5InstanceRef.current) {
           sourceType = NODE_TYPES.IMAGE;
-          const imagePath = withCorsProxy(sourceImageData.path);
+          const imagePath = withCorsProxy(sourceImagePath);
           const cachedImage = imageCacheRef.current.get(imagePath);
           if (cachedImage) {
             loadedImage = cachedImage;
@@ -343,8 +345,8 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       backgroundMetadataListRef.current = newBackgroundMetadataList;
       textMetadataListRef.current = newTextMetadataList;
       const hasLivePreview = isGifPath(mousePointerRef.current)
-        || newImageMetadataList.some(image => isGifPath(image.path))
-        || newBackgroundMetadataList.some(background => isGifPath(background.sourceImageData?.path));
+        || newImageMetadataList.some(image => isGifPath(getImageSourcePath(image)))
+        || newBackgroundMetadataList.some(background => isGifPath(getImageSourcePath(background.sourceImageData)));
       hasLivePreviewRef.current = hasLivePreview;
 
       if (hasLivePreview) {
@@ -644,7 +646,7 @@ const createSceneDrawTasks = ({
     const surfaceWidth = resolveSurfaceDimension(backgroundData.width, backgroundData.autoWidth, p5Instance.width);
     const surfaceHeight = resolveSurfaceDimension(backgroundData.height, backgroundData.autoHeight, p5Instance.height);
     const opacity = clamp(toNumberOrNull(sourceImageData.opacity) ?? 1, 0, 1);
-    const canUsePatternFill = !isGifPath(sourceImageData.path);
+    const canUsePatternFill = !isGifPath(getImageSourcePath(sourceImageData));
 
     if (style === 'tile') {
       tasks.push((target) => {
@@ -882,12 +884,32 @@ const logPreviewTiming = (label: string, startedAt: number, details?: Record<str
   console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`);
 };
 
+const getImageSourcePath = (data: Partial<ImageNodeData> | null | undefined) => {
+  if (!data) {
+    return null;
+  }
+
+  if (typeof data.localImageDataUrl === 'string' && data.localImageDataUrl.trim()) {
+    return data.localImageDataUrl.trim();
+  }
+
+  if (typeof data.path === 'string' && data.path.trim()) {
+    return data.path.trim();
+  }
+
+  return null;
+};
+
 const withCorsProxy = (path: string) =>
   path.startsWith('http')
     ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(path)}`
     : path;
 
-const isGifPath = (path: unknown) => typeof path === 'string' && /\.gif(?:$|[?#])/i.test(path.trim());
+const isGifPath = (path: unknown) => typeof path === 'string'
+  && (
+    /^data:image\/gif(?:;|,)/i.test(path.trim())
+    || /\.gif(?:$|[?#])/i.test(path.trim())
+  );
 
 const toBoolean = (value: unknown) => value === true || value === 'true';
 
@@ -984,7 +1006,7 @@ const createRenderSignature = (
   }));
 
   const imageSignature = images.map(item => ({
-    path: item.path ?? '',
+    path: getImageSourcePath(item) ?? '',
     width: item.width ?? null,
     height: item.height ?? null,
     autoWidth: item.autoWidth ?? false,

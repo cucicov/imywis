@@ -1,5 +1,5 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
-import {useCallback, useState, type ChangeEvent, type CSSProperties} from 'react';
+import {useCallback, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent} from 'react';
 import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
@@ -51,25 +51,159 @@ const numberInputStyle: CSSProperties = {
     color: 'black',
 };
 
+const MAX_LOCAL_IMAGE_BYTES = 2 * 1024 * 1024;
+
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const fieldsExpanded = data.collapsed !== true;
     const [previewErrorPath, setPreviewErrorPath] = useState<string | null>(null);
-    const hasPreviewError = previewErrorPath === data.path;
+    const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
+    const [isDragTargetActive, setIsDragTargetActive] = useState(false);
+    const dragDepthRef = useRef(0);
+    const previewPath = data.localImageDataUrl ?? data.path ?? '';
+    const hasPreviewError = previewErrorPath === previewPath;
     const widthNumericValue = toFiniteNumber(data.width, 100);
     const heightNumericValue = toFiniteNumber(data.height, 100);
     const positionXNumericValue = toFiniteNumber(data.positionX, 0);
     const positionYNumericValue = toFiniteNumber(data.positionY, 0);
+
+    const applyNodeFieldUpdates = useCallback((updates: Array<{field: string; value: unknown}>) => {
+        const edges = getEdges();
+        setNodes((nds) => updates.reduce(
+            (currentNodes, update) => updateNodeAndPropagate(currentNodes, edges, id, update.field, update.value),
+            nds
+        ));
+    }, [getEdges, id, setNodes]);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
         const newValue = type === 'checkbox' ? checked : value;
         const field = targetId.replace('field-', '');
 
-        const edges = getEdges();
-        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
-    }, [getEdges, id, setNodes]);
+        if (field === 'path') {
+            applyNodeFieldUpdates([
+                {field: 'path', value: newValue},
+                {field: 'localImageDataUrl', value: undefined},
+                {field: 'localImageFileName', value: undefined},
+            ]);
+            setPreviewErrorPath(null);
+            setDropErrorMessage(null);
+            return;
+        }
+
+        applyNodeFieldUpdates([{field, value: newValue}]);
+    }, [applyNodeFieldUpdates]);
+
+    const hasImageFileInDragPayload = useCallback((evt: DragEvent<HTMLElement>) => {
+        const items = evt.dataTransfer?.items;
+        if (!items || items.length === 0) {
+            return false;
+        }
+
+        return Array.from(items).some((item) => item.kind === 'file' && item.type.startsWith('image/'));
+    }, []);
+
+    const handlePathDropPayload = useCallback((evt: DragEvent<HTMLElement>) => {
+        evt.preventDefault();
+        dragDepthRef.current = 0;
+        setIsDragTargetActive(false);
+
+        const droppedFile = evt.dataTransfer.files?.[0];
+        if (droppedFile) {
+            if (!droppedFile.type.startsWith('image/')) {
+                setDropErrorMessage('Only image files are supported.');
+                return;
+            }
+            if (droppedFile.size > MAX_LOCAL_IMAGE_BYTES) {
+                setDropErrorMessage('Image exceeds 2 MB limit.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = () => {
+                const fileDataUrl = typeof reader.result === 'string' ? reader.result : '';
+                if (!fileDataUrl.startsWith('data:image/')) {
+                    setDropErrorMessage('Failed to read image file.');
+                    return;
+                }
+
+                applyNodeFieldUpdates([
+                    {field: 'path', value: `local:${droppedFile.name}`},
+                    {field: 'localImageDataUrl', value: fileDataUrl},
+                    {field: 'localImageFileName', value: droppedFile.name},
+                ]);
+                setPreviewErrorPath(null);
+                setDropErrorMessage(null);
+            };
+            reader.readAsDataURL(droppedFile);
+            return;
+        }
+
+        const droppedPath = evt.dataTransfer.getData('text/uri-list')
+            || evt.dataTransfer.getData('text/plain');
+        const normalizedPath = droppedPath.trim();
+        if (!normalizedPath) {
+            return;
+        }
+
+        applyNodeFieldUpdates([
+            {field: 'path', value: normalizedPath},
+            {field: 'localImageDataUrl', value: undefined},
+            {field: 'localImageFileName', value: undefined},
+        ]);
+        setPreviewErrorPath(null);
+        setDropErrorMessage(null);
+    }, [applyNodeFieldUpdates]);
+
+    const onNodeDragEnter = useCallback((evt: DragEvent<HTMLDivElement>) => {
+        if (!hasImageFileInDragPayload(evt)) {
+            return;
+        }
+        evt.preventDefault();
+        dragDepthRef.current += 1;
+        setIsDragTargetActive(true);
+    }, [hasImageFileInDragPayload]);
+
+    const onNodeDragOver = useCallback((evt: DragEvent<HTMLDivElement>) => {
+        if (!hasImageFileInDragPayload(evt)) {
+            return;
+        }
+        evt.preventDefault();
+        evt.dataTransfer.dropEffect = 'copy';
+        setIsDragTargetActive(true);
+    }, [hasImageFileInDragPayload]);
+
+    const onNodeDragLeave = useCallback((evt: DragEvent<HTMLDivElement>) => {
+        if (!hasImageFileInDragPayload(evt)) {
+            return;
+        }
+        evt.preventDefault();
+        dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+        if (dragDepthRef.current === 0) {
+            setIsDragTargetActive(false);
+        }
+    }, [hasImageFileInDragPayload]);
+
+    const onNodeDrop = useCallback((evt: DragEvent<HTMLDivElement>) => {
+        if (!hasImageFileInDragPayload(evt)) {
+            return;
+        }
+        handlePathDropPayload(evt);
+    }, [handlePathDropPayload, hasImageFileInDragPayload]);
+
+    const onPathDragOver = useCallback((evt: DragEvent<HTMLInputElement>) => {
+        if (!hasImageFileInDragPayload(evt)) {
+            return;
+        }
+        evt.preventDefault();
+        evt.dataTransfer.dropEffect = 'copy';
+        setIsDragTargetActive(true);
+    }, [hasImageFileInDragPayload]);
+
+    const onPathDrop = useCallback((evt: DragEvent<HTMLInputElement>) => {
+        handlePathDropPayload(evt);
+    }, [handlePathDropPayload]);
 
     const onNumericSliderChange = useCallback((field: string, nextValue: number) => {
         const edges = getEdges();
@@ -93,6 +227,10 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
     return (
         <div
             className={`imywis-node-shell${data.connectionImpactKey ? ' imywis-node-shell--impact' : ''}`}
+            onDragEnter={onNodeDragEnter}
+            onDragOver={onNodeDragOver}
+            onDragLeave={onNodeDragLeave}
+            onDrop={onNodeDrop}
             style={{
             padding: '10px',
             borderRadius: '15px',
@@ -100,7 +238,32 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
             color: '#222',
             border: '1px solid white',
             fontSize: '12px',
+            position: 'relative',
+            outline: isDragTargetActive ? '2px dashed #792D05' : 'none',
+            boxShadow: isDragTargetActive ? '0 0 0 3px rgba(121, 45, 5, 0.2)' : 'none',
         }}>
+            {isDragTargetActive && (
+                <div
+                    className="nodrag"
+                    style={{
+                        position: 'absolute',
+                        inset: '6px',
+                        borderRadius: '10px',
+                        background: 'rgba(255,255,255,0.68)',
+                        border: '1px dashed #792D05',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        color: '#4f1d05',
+                        zIndex: 20,
+                        pointerEvents: 'none',
+                    }}
+                >
+                    Drop image here
+                </div>
+            )}
             {/*------------------- inputs ------------------- */}
             <Handle
                 key="input-0"
@@ -163,7 +326,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     }}
             />
 
-            {data.path && !hasPreviewError && (
+            {previewPath && !hasPreviewError && (
                 <div style={{
                     marginBottom: '6px',
                     padding: '3px',
@@ -172,11 +335,11 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     border: '1px solid rgba(0,0,0,0.1)'
                 }}>
                     <img
-                        src={data.path.startsWith('http')
-                            ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(data.path)}`
-                            : data.path}
+                        src={previewPath.startsWith('http')
+                            ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(previewPath)}`
+                            : previewPath}
                         alt={`${data.label ?? 'Image'} preview`}
-                        onError={() => setPreviewErrorPath(data.path ?? null)}
+                        onError={() => setPreviewErrorPath(previewPath)}
                         style={{
                             display: 'block',
                             width: '80px',
@@ -216,8 +379,21 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                                     type="text"
                                     value={data.path ?? ''}
                                     onChange={onTextChange}
+                                    onDragOver={onPathDragOver}
+                                    onDrop={onPathDrop}
+                                    title="Drop an image file here to attach it locally."
                                     style={textInputStyle}
                                 />
+                                {data.localImageFileName && (
+                                    <span style={{fontSize: '9px', color: '#3a2a20'}}>
+                                        local file: {data.localImageFileName}
+                                    </span>
+                                )}
+                                {dropErrorMessage && (
+                                    <span style={{fontSize: '9px', color: '#8b0000'}}>
+                                        {dropErrorMessage}
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div style={rowStyle}>

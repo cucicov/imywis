@@ -1,6 +1,6 @@
 import {useState, type CSSProperties} from 'react';
 import type {Edge, Node} from '@xyflow/react';
-import {NODE_TYPES, type PageNodeData} from '../types/nodeTypes';
+import {NODE_TYPES, type ImageNodeData, type PageNodeData} from '../types/nodeTypes';
 import {APP_CONFIG} from '../config/appConfig';
 import type {Session} from "@supabase/supabase-js";
 import {supabase} from "../utils/supabaseClient.ts";
@@ -111,6 +111,8 @@ const statusChipStyle: CSSProperties = {
     color: '#fff',
 };
 
+const MAX_LOCAL_IMAGE_BYTES = 2 * 1024 * 1024;
+
 const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5ProjectProps) => {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -161,6 +163,14 @@ const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5Proje
             setStatusType(null);
 
             const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
+            const oversizedLocalImages = getOversizedLocalImages(nodes, MAX_LOCAL_IMAGE_BYTES);
+            if (oversizedLocalImages.length > 0) {
+                const names = oversizedLocalImages.slice(0, 3).map(item => item.fileName).join(', ');
+                const suffix = oversizedLocalImages.length > 3 ? '...' : '';
+                setStatusMessage(`Publish blocked: local image exceeds 2 MB (${names}${suffix}).`);
+                setStatusType('error');
+                return;
+            }
 
             const pagesData: SerializablePageData[] = pageNodes.map(pageNode => {
                 const pageData = pageNode.data as PageNodeData;
@@ -284,6 +294,43 @@ const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5Proje
             )}
         </>
     );
+};
+
+const getOversizedLocalImages = (nodes: Node[], maxBytes: number) => {
+    const oversized: Array<{fileName: string}> = [];
+
+    nodes.forEach((node) => {
+        if (node.type !== NODE_TYPES.IMAGE) {
+            return;
+        }
+
+        const data = node.data as ImageNodeData;
+        const dataUrl = data.localImageDataUrl;
+        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+            return;
+        }
+
+        const byteLength = getDataUrlByteLength(dataUrl);
+        if (byteLength > maxBytes) {
+            oversized.push({
+                fileName: data.localImageFileName ?? data.path ?? `image-node-${node.id}`,
+            });
+        }
+    });
+
+    return oversized;
+};
+
+const getDataUrlByteLength = (dataUrl: string) => {
+    const commaIndex = dataUrl.indexOf(',');
+    if (commaIndex === -1) {
+        return 0;
+    }
+
+    const base64 = dataUrl.slice(commaIndex + 1);
+    const trimmed = base64.replace(/\s/g, '');
+    const padding = trimmed.endsWith('==') ? 2 : trimmed.endsWith('=') ? 1 : 0;
+    return Math.floor((trimmed.length * 3) / 4) - padding;
 };
 
 export default ExportP5Project;
