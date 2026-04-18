@@ -92,6 +92,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
+  const [previewEnabled, setPreviewEnabled] = useState(true);
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const previousMetadataSignatureByNodeIdRef = useRef<Map<string, string>>(new Map());
   const [viewportSize, setViewportSize] = useState(() => ({
@@ -444,7 +445,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           fitView
           style={{ width: '100%', height: '100%' }}
         >
-          <P5Preview nodes={nodes} />
+          {previewEnabled ? <P5Preview nodes={nodes} /> : null}
           <NodeStateTransfer />
           <AddPageNodeButton />
           <AddImageNodeButton />
@@ -452,7 +453,11 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           <AddTextNodeButton />
           <AddEventNodeButton />
           <AddExternalLinkNodeButton />
-          <LatestSelectedPageNameBadge pageName={latestSelectedPageName} />
+          <LatestSelectedPageNameBadge
+            pageName={latestSelectedPageName}
+            previewEnabled={previewEnabled}
+            onPreviewEnabledChange={setPreviewEnabled}
+          />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>
       </div>

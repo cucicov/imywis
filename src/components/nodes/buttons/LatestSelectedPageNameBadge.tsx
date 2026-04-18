@@ -1,8 +1,14 @@
 type LatestSelectedPageNameBadgeProps = {
   pageName: string;
+  previewEnabled: boolean;
+  onPreviewEnabledChange: (value: boolean) => void;
 };
 
-const LatestSelectedPageNameBadge = ({ pageName }: LatestSelectedPageNameBadgeProps) => {
+const LatestSelectedPageNameBadge = ({
+  pageName,
+  previewEnabled,
+  onPreviewEnabledChange,
+}: LatestSelectedPageNameBadgeProps) => {
   return (
     <div
       style={{
@@ -18,9 +24,20 @@ const LatestSelectedPageNameBadge = ({ pageName }: LatestSelectedPageNameBadgePr
         fontSize: '12px',
         maxWidth: '280px',
         wordBreak: 'break-word',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
       }}
     >
-      Displaying preview: <b>{pageName}</b>
+      <input
+        type="checkbox"
+        checked={previewEnabled}
+        onChange={(event) => onPreviewEnabledChange(event.target.checked)}
+        aria-label="Toggle background preview"
+      />
+      <span>
+        Displaying preview: <b>{pageName}</b>
+      </span>
     </div>
   );
 };
