@@ -20,7 +20,7 @@ This changelog tracks public releases and delivered changes.
 - Now users will have to sign up with their email address before publishing. The publishing happens at the user custom url, not at /test anymore. The user custom user for no is the email handle used for the singup.
 
 ### Fixed
-
+- User handle sanitization → remove any non alphanumeric characters from the user email handle.
 
 ### Removed
 

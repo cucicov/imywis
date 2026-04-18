@@ -37,6 +37,7 @@ import {
   getLatestSelectedPageNameFromSession,
   setLatestSelectedPageNameInSession,
 } from '../utils/sessionStorage.ts';
+import {supabase} from '../utils/supabaseClient.ts';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -47,7 +48,7 @@ const nodeTypes = {
   externalLinkNode: ExternalLinkNode,
 };
 
-const initialNodes = [
+const initialNodes: Node[] = [
   {
     id: '1',
     type: NODE_TYPES.PAGE,
@@ -57,6 +58,33 @@ const initialNodes = [
 ];
 
 const initialEdges: Edge[] = [];
+
+type PersistedNode = {
+  id?: unknown;
+  type?: unknown;
+  data?: unknown;
+  position?: {
+    x?: unknown;
+    y?: unknown;
+  };
+};
+
+type UserProfileProjectRow = {
+  data?: unknown;
+};
+
+type PersistedProjectData = {
+  nodes: Node[];
+  edges: Edge[];
+};
+
+type NodeDataWithMetadata = {
+  metadata?: {
+    sourceNodes?: Array<{ nodeId: string; handleType: string }>;
+  };
+  connectionImpactKey?: number;
+  [key: string]: unknown;
+};
 
 
 const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
@@ -69,6 +97,42 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     width: window.innerWidth,
     height: window.innerHeight,
   }));
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadNodesFromProfile = async () => {
+      const {data, error} = await supabase
+        .from('user_profiles')
+        .select('data')
+        .eq('user_id', session.user.id)
+        .maybeSingle<UserProfileProjectRow>();
+
+      if (!isActive) {
+        return;
+      }
+
+      if (error) {
+        console.error('Failed to load saved project from public.user_profiles:', error);
+        return;
+      }
+
+      const persistedProjectData = normalizePersistedProjectData(data?.data);
+
+      if (!persistedProjectData) {
+        return;
+      }
+
+      setNodes(persistedProjectData.nodes.length > 0 ? persistedProjectData.nodes : initialNodes);
+      setEdges(persistedProjectData.edges);
+    };
+
+    void loadNodesFromProfile();
+
+    return () => {
+      isActive = false;
+    };
+  }, [session.user.id, setEdges, setNodes]);
 
   const persistSelectedPageNode = useCallback((node: Node) => {
     if (node.type !== NODE_TYPES.PAGE) {
@@ -128,10 +192,11 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       // Update metadata for all nodes
       currentNodes.forEach(node => {
         let updatedNode = node as typeof node;
+        const nodeData = node.data as NodeDataWithMetadata;
 
         // Remove metadata for disconnected sources
-        if (node.data.metadata?.sourceNodes) {
-          node.data.metadata.sourceNodes.forEach((source: { nodeId: string; handleType: string }) => {
+        if (nodeData.metadata?.sourceNodes) {
+          nodeData.metadata.sourceNodes.forEach((source) => {
             const connectionKey = `${source.nodeId}:${source.handleType}`;
             const nodeActiveConnections = activeConnections.get(node.id);
             const sourceNodeStillExists = nodeMap.has(source.nodeId);
@@ -187,7 +252,8 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     const impactedNodeIds: string[] = [];
 
     nodes.forEach((node) => {
-      const metadataSignature = JSON.stringify(node.data.metadata?.sourceNodes ?? []);
+      const nodeData = node.data as NodeDataWithMetadata;
+      const metadataSignature = JSON.stringify(nodeData.metadata?.sourceNodes ?? []);
       currentSignatures.set(node.id, metadataSignature);
 
       const previousSignature = previousMetadataSignatureByNodeIdRef.current.get(node.id);
@@ -362,7 +428,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         >
           {animationsEnabled ? 'Animations: ON' : 'Animations: OFF'}
         </button>
-        <ExportP5Project nodes={nodes} session={session}/>
+        <ExportP5Project nodes={nodes} edges={edges} session={session}/>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -452,6 +518,114 @@ const resolveSelectedPageName = (value: unknown) => {
 
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : 'Unnamed page';
+};
+
+const normalizePersistedProjectData = (value: unknown): PersistedProjectData | null => {
+  if (Array.isArray(value)) {
+    const nodes = normalizePersistedNodes(value);
+    if (!nodes) {
+      return null;
+    }
+
+    return {
+      nodes,
+      edges: [],
+    };
+  }
+
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const nodesValue = value.nodes;
+  const edgesValue = value.edges;
+  const nodes = normalizePersistedNodes(nodesValue);
+  const edges = normalizePersistedEdges(edgesValue);
+
+  if (!nodes || !edges) {
+    return null;
+  }
+
+  return {
+    nodes,
+    edges,
+  };
+};
+
+const normalizePersistedNodes = (value: unknown): Node[] | null => {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const parsedNodes: Node[] = [];
+
+  value.forEach((item) => {
+    const candidate = item as PersistedNode;
+    const id = typeof candidate.id === 'string' && candidate.id.trim().length > 0
+      ? candidate.id
+      : null;
+    const type = typeof candidate.type === 'string'
+      && Object.values(NODE_TYPES).includes(candidate.type as typeof NODE_TYPES[keyof typeof NODE_TYPES])
+      ? candidate.type
+      : null;
+    const positionX = typeof candidate.position?.x === 'number' ? candidate.position.x : 0;
+    const positionY = typeof candidate.position?.y === 'number' ? candidate.position.y : 0;
+    const data = isRecord(candidate.data) ? candidate.data : null;
+
+    if (!id || !type || !data) {
+      return;
+    }
+
+    parsedNodes.push({
+      id,
+      type,
+      data: {
+        label: typeof data.label === 'string' ? data.label : String(type),
+        ...data,
+      },
+      position: {
+        x: positionX,
+        y: positionY,
+      },
+    });
+  });
+
+  return parsedNodes;
+};
+
+const normalizePersistedEdges = (value: unknown): Edge[] | null => {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const parsedEdges: Edge[] = [];
+
+  value.forEach((item) => {
+    if (!isRecord(item)) {
+      return;
+    }
+
+    const id = typeof item.id === 'string' ? item.id : null;
+    const source = typeof item.source === 'string' ? item.source : null;
+    const target = typeof item.target === 'string' ? item.target : null;
+
+    if (!id || !source || !target) {
+      return;
+    }
+
+    parsedEdges.push({
+      ...item,
+      id,
+      source,
+      target,
+    } as Edge);
+  });
+
+  return parsedEdges;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null;
 };
 
 export default FlowCanvas;

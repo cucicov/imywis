@@ -1,5 +1,5 @@
 import {useState, type CSSProperties} from 'react';
-import type {Node} from '@xyflow/react';
+import type {Edge, Node} from '@xyflow/react';
 import {NODE_TYPES, type PageNodeData} from '../types/nodeTypes';
 import {APP_CONFIG} from '../config/appConfig';
 import type {Session} from "@supabase/supabase-js";
@@ -7,6 +7,7 @@ import {supabase} from "../utils/supabaseClient.ts";
 
 type ExportP5ProjectProps = {
     nodes: Node[];
+    edges: Edge[];
     session: Session;
 };
 
@@ -108,7 +109,7 @@ const statusChipStyle: CSSProperties = {
     color: '#fff',
 };
 
-const ExportP5Project = ({nodes, session}: ExportP5ProjectProps) => {
+const ExportP5Project = ({nodes, edges, session}: ExportP5ProjectProps) => {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [statusType, setStatusType] = useState<'success' | 'error' | null>(null);
@@ -151,11 +152,11 @@ const ExportP5Project = ({nodes, session}: ExportP5ProjectProps) => {
         throw new Error('No user handle found in public.user_profiles for current user.');
     };
 
-    const savePagesDataToUserProfile = async (userId: string, pagesData: SerializablePageData[]) => {
+    const savePagesDataToUserProfile = async (userId: string, exportedNodesJson: { nodes: Node[]; edges: Edge[] }) => {
 
         const {data: byUserIdData, error: byUserIdError} = await supabase
             .from('user_profiles')
-            .update({data: pagesData})
+            .update({data: exportedNodesJson})
             .eq('user_id', userId);
 
         if (byUserIdError) {
@@ -194,6 +195,7 @@ const ExportP5Project = ({nodes, session}: ExportP5ProjectProps) => {
                 userHandle,
                 pagesData,
             };
+            const exportedNodesJson = { nodes, edges };
 
             console.log('Exporting pages:', JSON.stringify(exportPayload));
 
@@ -220,7 +222,7 @@ const ExportP5Project = ({nodes, session}: ExportP5ProjectProps) => {
                 return;
             }
 
-            await savePagesDataToUserProfile(session.user.id, pagesData);
+            await savePagesDataToUserProfile(session.user.id, exportedNodesJson);
 
             setStatusMessage(payload?.message ?? 'Nodes processed successfully and profile data updated');
             setStatusType('success');
