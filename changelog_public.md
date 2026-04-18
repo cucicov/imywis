@@ -15,6 +15,7 @@ This changelog tracks public releases and delivered changes.
 
 ### Added
 - New login/signup page.
+- Autosave option: OFF by default. Saves user project automatically each minute.
 
 ### Changed
 - Now users will have to sign up with their email address before publishing. The publishing happens at the user custom url, not at /test anymore. The user custom user for no is the email handle used for the singup.

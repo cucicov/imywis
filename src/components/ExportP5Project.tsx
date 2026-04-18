@@ -4,6 +4,7 @@ import {NODE_TYPES, type PageNodeData} from '../types/nodeTypes';
 import {APP_CONFIG} from '../config/appConfig';
 import type {Session} from "@supabase/supabase-js";
 import {supabase} from "../utils/supabaseClient.ts";
+import {saveProjectDataToUserProfile} from '../utils/userProfileProject.ts';
 
 type ExportP5ProjectProps = {
     nodes: Node[];
@@ -152,23 +153,6 @@ const ExportP5Project = ({nodes, edges, session}: ExportP5ProjectProps) => {
         throw new Error('No user handle found in public.user_profiles for current user.');
     };
 
-    const savePagesDataToUserProfile = async (userId: string, exportedNodesJson: { nodes: Node[]; edges: Edge[] }) => {
-
-        const {data: byUserIdData, error: byUserIdError} = await supabase
-            .from('user_profiles')
-            .update({data: exportedNodesJson})
-            .eq('user_id', userId);
-
-        if (byUserIdError) {
-            console.error('Error updating profile data by user_id:', byUserIdError);
-            throw new Error(`Failed to update profile data by user_id: ${byUserIdError.message}`);
-        }
-
-        if (byUserIdData) {
-            return;
-        }
-    };
-
     const onExport = async () => {
         try {
             setIsLoading(true);
@@ -222,7 +206,7 @@ const ExportP5Project = ({nodes, edges, session}: ExportP5ProjectProps) => {
                 return;
             }
 
-            await savePagesDataToUserProfile(session.user.id, exportedNodesJson);
+            await saveProjectDataToUserProfile(session.user.id, exportedNodesJson);
 
             setStatusMessage(payload?.message ?? 'Nodes processed successfully and profile data updated');
             setStatusType('success');

@@ -38,6 +38,7 @@ import {
   setLatestSelectedPageNameInSession,
 } from '../utils/sessionStorage.ts';
 import {supabase} from '../utils/supabaseClient.ts';
+import AutosaveToggle from './AutosaveToggle.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -428,6 +429,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         >
           {animationsEnabled ? 'Animations: ON' : 'Animations: OFF'}
         </button>
+        <AutosaveToggle nodes={nodes} edges={edges} session={session} />
         <ExportP5Project nodes={nodes} edges={edges} session={session}/>
         <ReactFlow
           nodes={nodes}
