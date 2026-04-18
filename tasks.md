@@ -20,3 +20,8 @@
 
 **RULES**
 1. input fields of nodes must have the id name in the format of "field-{fieldName}" where fieldName is the exact name of the field in the type specified in NodeTypes.
+
+
+**SUPABASE/VERCEL/RESEND (config for prod)**
+- env variable settings for VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+- redirecturl in supabase: Authentication/Url Configuration/Site URL -> the user landing page.
