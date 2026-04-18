@@ -10,6 +10,7 @@ type ExportP5ProjectProps = {
     nodes: Node[];
     edges: Edge[];
     session: Session;
+    onSavedAtChange: (value: Date) => void;
 };
 
 type ExportResponse = {
@@ -110,7 +111,7 @@ const statusChipStyle: CSSProperties = {
     color: '#fff',
 };
 
-const ExportP5Project = ({nodes, edges, session}: ExportP5ProjectProps) => {
+const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5ProjectProps) => {
     const [isLoading, setIsLoading] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [statusType, setStatusType] = useState<'success' | 'error' | null>(null);
@@ -207,6 +208,7 @@ const ExportP5Project = ({nodes, edges, session}: ExportP5ProjectProps) => {
             }
 
             await saveProjectDataToUserProfile(session.user.id, exportedNodesJson);
+            onSavedAtChange(new Date());
 
             setStatusMessage(payload?.message ?? 'Nodes processed successfully and profile data updated');
             setStatusType('success');

@@ -93,6 +93,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [previewEnabled, setPreviewEnabled] = useState(true);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const previousMetadataSignatureByNodeIdRef = useRef<Map<string, string>>(new Map());
   const [viewportSize, setViewportSize] = useState(() => ({
@@ -430,8 +431,19 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         >
           {animationsEnabled ? 'Animations: ON' : 'Animations: OFF'}
         </button>
-        <AutosaveToggle nodes={nodes} edges={edges} session={session} />
-        <ExportP5Project nodes={nodes} edges={edges} session={session}/>
+        <AutosaveToggle
+          nodes={nodes}
+          edges={edges}
+          session={session}
+          lastSavedAt={lastSavedAt}
+          onSavedAtChange={setLastSavedAt}
+        />
+        <ExportP5Project
+          nodes={nodes}
+          edges={edges}
+          session={session}
+          onSavedAtChange={setLastSavedAt}
+        />
         <ReactFlow
           nodes={nodes}
           edges={edges}

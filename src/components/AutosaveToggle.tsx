@@ -7,6 +7,8 @@ type AutosaveToggleProps = {
   nodes: Node[];
   edges: Edge[];
   session: Session;
+  lastSavedAt: Date | null;
+  onSavedAtChange: (value: Date) => void;
 };
 
 const AUTOSAVE_INTERVAL_MS = 60_000;
@@ -25,7 +27,13 @@ const buttonStyle: CSSProperties = {
   letterSpacing: '0.02em',
 };
 
-const AutosaveToggle = ({nodes, edges, session}: AutosaveToggleProps) => {
+const AutosaveToggle = ({
+  nodes,
+  edges,
+  session,
+  lastSavedAt,
+  onSavedAtChange,
+}: AutosaveToggleProps) => {
   const [autosaveEnabled, setAutosaveEnabled] = useState(false);
   const latestNodesRef = useRef(nodes);
   const latestEdgesRef = useRef(edges);
@@ -49,7 +57,7 @@ const AutosaveToggle = ({nodes, edges, session}: AutosaveToggleProps) => {
           nodes: latestNodesRef.current,
           edges: latestEdgesRef.current,
         });
-        console.log('Autosave successful');
+        onSavedAtChange(new Date());
       } catch (error) {
         console.error('Autosave failed:', error);
       }
@@ -58,7 +66,7 @@ const AutosaveToggle = ({nodes, edges, session}: AutosaveToggleProps) => {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [autosaveEnabled, session.user.id]);
+  }, [autosaveEnabled, onSavedAtChange, session.user.id]);
 
   return (
     <button
@@ -69,9 +77,16 @@ const AutosaveToggle = ({nodes, edges, session}: AutosaveToggleProps) => {
         backgroundColor: autosaveEnabled ? '#f3f7ff' : '#f5f5f5',
       }}
     >
-      {autosaveEnabled ? 'Autosave: ON' : 'Autosave: OFF'}
+      <span>{autosaveEnabled ? 'Autosave: ON' : 'Autosave: OFF'}</span>
+      <span style={{marginLeft: '8px', fontWeight: 300, fontSize: '10px'}}>
+        Last save: {lastSavedAt ? formatTimestamp(lastSavedAt) : '--'}
+      </span>
     </button>
   );
+};
+
+const formatTimestamp = (value: Date) => {
+  return value.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'});
 };
 
 export default AutosaveToggle;
