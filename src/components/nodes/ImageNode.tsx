@@ -5,6 +5,7 @@ import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
 import {APP_CONFIG} from '../../config/appConfig.ts';
 import CumulativeCenterSlider from '../CumulativeCenterSlider.tsx';
+import {saveLocalImageDataUrl} from '../../utils/localImageCache.ts';
 
 const labelStyle: CSSProperties = {
     fontSize: '10px',
@@ -61,7 +62,9 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
     const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
     const [isDragTargetActive, setIsDragTargetActive] = useState(false);
     const dragDepthRef = useRef(0);
-    const previewPath = data.localImageDataUrl ?? data.path ?? '';
+    const previewPath = data.localImageDataUrl
+        ?? (typeof data.path === 'string' && !data.path.startsWith('local:') ? data.path : '')
+        ?? '';
     const hasPreviewError = previewErrorPath === previewPath;
     const widthNumericValue = toFiniteNumber(data.width, 100);
     const heightNumericValue = toFiniteNumber(data.height, 100);
@@ -133,6 +136,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     {field: 'localImageDataUrl', value: fileDataUrl},
                     {field: 'localImageFileName', value: droppedFile.name},
                 ]);
+                void saveLocalImageDataUrl(`local:${droppedFile.name}`, fileDataUrl);
                 setPreviewErrorPath(null);
                 setDropErrorMessage(null);
             };

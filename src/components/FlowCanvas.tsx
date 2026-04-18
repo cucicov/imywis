@@ -39,6 +39,7 @@ import {
 } from '../utils/sessionStorage.ts';
 import {supabase} from '../utils/supabaseClient.ts';
 import AutosaveToggle from './AutosaveToggle.tsx';
+import {getLocalImageDataUrl} from '../utils/localImageCache.ts';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -126,7 +127,8 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         return;
       }
 
-      setNodes(persistedProjectData.nodes.length > 0 ? persistedProjectData.nodes : initialNodes);
+      const hydratedNodes = await hydrateNodesWithLocalImageCache(persistedProjectData.nodes);
+      setNodes(hydratedNodes.length > 0 ? hydratedNodes : initialNodes);
       setEdges(persistedProjectData.edges);
     };
 
@@ -645,6 +647,65 @@ const normalizePersistedEdges = (value: unknown): Edge[] | null => {
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
+};
+
+const hydrateNodesWithLocalImageCache = async (nodes: Node[]): Promise<Node[]> => {
+  const dataUrlByPathCache = new Map<string, string | null>();
+
+  const resolveCachedDataUrl = async (path: string) => {
+    const normalizedPath = path.trim();
+    if (!normalizedPath.startsWith('local:')) {
+      return null;
+    }
+
+    if (dataUrlByPathCache.has(normalizedPath)) {
+      return dataUrlByPathCache.get(normalizedPath) ?? null;
+    }
+
+    const cachedDataUrl = await getLocalImageDataUrl(normalizedPath);
+    dataUrlByPathCache.set(normalizedPath, cachedDataUrl);
+    return cachedDataUrl;
+  };
+
+  const hydrateValue = async (value: unknown): Promise<unknown> => {
+    if (Array.isArray(value)) {
+      const hydratedItems = await Promise.all(value.map((item) => hydrateValue(item)));
+      return hydratedItems;
+    }
+
+    if (!isRecord(value)) {
+      return value;
+    }
+
+    const record = value as Record<string, unknown>;
+    const output: Record<string, unknown> = {};
+
+    const pathValue = typeof record.path === 'string' ? record.path : '';
+    const localImageDataUrlValue = typeof record.localImageDataUrl === 'string'
+      ? record.localImageDataUrl.trim()
+      : '';
+
+    const keys = Object.keys(record);
+    for (const key of keys) {
+      output[key] = await hydrateValue(record[key]);
+    }
+
+    if (!localImageDataUrlValue && pathValue.trim().startsWith('local:')) {
+      const cachedDataUrl = await resolveCachedDataUrl(pathValue);
+      if (cachedDataUrl) {
+        output.localImageDataUrl = cachedDataUrl;
+      }
+    }
+
+    return output;
+  };
+
+  const hydratedNodes = await Promise.all(nodes.map(async (node) => ({
+    ...node,
+    data: await hydrateValue(node.data) as Record<string, unknown>,
+  })));
+
+  return hydratedNodes;
 };
 
 export default FlowCanvas;

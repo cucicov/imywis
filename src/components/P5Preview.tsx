@@ -894,7 +894,11 @@ const getImageSourcePath = (data: Partial<ImageNodeData> | null | undefined) => 
   }
 
   if (typeof data.path === 'string' && data.path.trim()) {
-    return data.path.trim();
+    const trimmedPath = data.path.trim();
+    if (trimmedPath.startsWith('local:')) {
+      return null;
+    }
+    return trimmedPath;
   }
 
   return null;
