@@ -164,8 +164,8 @@ const BackgroundNode = ({id, data}: NodeProps<Node<BackgroundNodeData, typeof NO
                                 >
                                     <option value="tile">tile</option>
                                     <option value="fullscreen">fullscreen</option>
-                                    <option value="stretch">stretch</option>
-                                    <option value="contain">contain</option>
+                                    {/*<option value="stretch">stretch</option>*/}
+                                    {/*<option value="contain">contain</option>*/}
                                 </select>
                             </div>
                         </div>

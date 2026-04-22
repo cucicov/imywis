@@ -138,7 +138,7 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
                                 style={inputStyle}
                             >
                                 <option value="click">click</option>
-                                <option value="mouse over">mouse over</option>
+                                {/*<option value="mouse over">mouse over</option>*/}
                             </select>
                         </div>
                     </div>

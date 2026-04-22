@@ -53,6 +53,9 @@ const numberInputStyle: CSSProperties = {
 };
 
 const MAX_LOCAL_IMAGE_BYTES = 2 * 1024 * 1024;
+const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.gif']);
+const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif']);
+const ALLOWED_IMAGE_UPLOAD_ERROR = 'Only .png, .jpg and .gif images are allowed.';
 
 const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES.IMAGE>>) => {
     const { setNodes, getEdges } = useReactFlow();
@@ -104,7 +107,7 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
             return false;
         }
 
-        return Array.from(items).some((item) => item.kind === 'file' && item.type.startsWith('image/'));
+        return Array.from(items).some((item) => item.kind === 'file' && isAllowedImageMimeType(item.type));
     }, []);
 
     const handlePathDropPayload = useCallback((evt: DragEvent<HTMLElement>) => {
@@ -114,8 +117,8 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
 
         const droppedFile = evt.dataTransfer.files?.[0];
         if (droppedFile) {
-            if (!droppedFile.type.startsWith('image/')) {
-                setDropErrorMessage('Only image files are supported.');
+            if (!isAllowedImageFile(droppedFile)) {
+                setDropErrorMessage(ALLOWED_IMAGE_UPLOAD_ERROR);
                 return;
             }
             if (droppedFile.size > MAX_LOCAL_IMAGE_BYTES) {
@@ -574,4 +577,15 @@ export default ImageNode;
 const toFiniteNumber = (value: unknown, fallback: number) => {
     const parsed = typeof value === 'number' ? value : Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const isAllowedImageFile = (file: File) => {
+    const mimeTypeAllowed = isAllowedImageMimeType(file.type);
+    const lowerFileName = file.name.toLowerCase();
+    const extensionAllowed = Array.from(ALLOWED_IMAGE_EXTENSIONS).some((extension) => lowerFileName.endsWith(extension));
+    return mimeTypeAllowed || extensionAllowed;
+};
+
+const isAllowedImageMimeType = (mimeType: string) => {
+    return ALLOWED_IMAGE_MIME_TYPES.has(mimeType.toLowerCase());
 };

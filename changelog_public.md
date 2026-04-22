@@ -33,3 +33,21 @@ This changelog tracks public releases and delivered changes.
 
 ### Notes
 - User handles are not configurable for the time being.
+
+---
+## [1.1.1] - 2026-04-23
+### Summary
+- Added fullscreen mode on Background Node.
+
+### Added
+- Now the Background Node can be set to fullscreen mode. Works like a cover for the whole size of the target page node.
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Security
+
+### Notes

@@ -624,17 +624,18 @@ const createSceneDrawTasks = ({
       return;
     }
 
+    const loadedImage = backgroundData.loadedImage;
     const sourceImageData = backgroundData.sourceImageData;
     const imageWidth = resolveDimension(
       sourceImageData.width,
       sourceImageData.autoWidth,
-      backgroundData.loadedImage.width,
+      loadedImage.width,
       100
     );
     const imageHeight = resolveDimension(
       sourceImageData.height,
       sourceImageData.autoHeight,
-      backgroundData.loadedImage.height,
+      loadedImage.height,
       100
     );
 
@@ -652,7 +653,7 @@ const createSceneDrawTasks = ({
       tasks.push((target) => {
         if (canUsePatternFill && drawTiledBackgroundWithPattern(
           target,
-          backgroundData.loadedImage as p5.Image,
+          loadedImage as p5.Image,
           imageWidth,
           imageHeight,
           surfaceWidth,
@@ -667,9 +668,35 @@ const createSceneDrawTasks = ({
         target.tint(255, opacity * 255);
         for (let y = 0; y < surfaceHeight; y += imageHeight) {
           for (let x = 0; x < surfaceWidth; x += imageWidth) {
-            target.image(backgroundData.loadedImage as p5.Image, x, y, imageWidth, imageHeight);
+            target.image(loadedImage as p5.Image, x, y, imageWidth, imageHeight);
           }
         }
+        target.pop();
+      });
+      return;
+    }
+
+    if (style === 'fullscreen') {
+      tasks.push((target) => {
+        const coverRect = resolveCoverRect(
+          loadedImage.width,
+          loadedImage.height,
+          target.width,
+          target.height
+        );
+        if (!coverRect) {
+          return;
+        }
+
+        target.push();
+        target.tint(255, opacity * 255);
+        target.image(
+          loadedImage as p5.Image,
+          coverRect.x,
+          coverRect.y,
+          coverRect.width,
+          coverRect.height
+        );
         target.pop();
       });
       return;
@@ -680,7 +707,7 @@ const createSceneDrawTasks = ({
     tasks.push((target) => {
       target.push();
       target.tint(255, opacity * 255);
-      target.image(backgroundData.loadedImage as p5.Image, positionX, positionY, imageWidth, imageHeight);
+      target.image(loadedImage as p5.Image, positionX, positionY, imageWidth, imageHeight);
       target.pop();
     });
   });
@@ -805,6 +832,28 @@ const drawTiledBackgroundWithPattern = (
   drawingContext.fillRect(0, 0, surfaceWidth, surfaceHeight);
   drawingContext.restore();
   return true;
+};
+
+const resolveCoverRect = (
+  sourceWidth: number,
+  sourceHeight: number,
+  containerWidth: number,
+  containerHeight: number
+) => {
+  if (sourceWidth <= 0 || sourceHeight <= 0 || containerWidth <= 0 || containerHeight <= 0) {
+    return null;
+  }
+
+  const scale = Math.max(containerWidth / sourceWidth, containerHeight / sourceHeight);
+  const width = sourceWidth * scale;
+  const height = sourceHeight * scale;
+
+  return {
+    x: (containerWidth - width) / 2,
+    y: (containerHeight - height) / 2,
+    width,
+    height,
+  };
 };
 
 const runProgressiveRenderStep = (
