@@ -18,7 +18,7 @@ import AddImageNodeButton from "./nodes/buttons/AddImageNodeButton.tsx";
 import ImageNode from "./nodes/ImageNode.tsx";
 import NodeStateTransfer from "./nodes/NodeStateTransfer.tsx";
 import type {PageNodeData} from "../types/nodeTypes.ts";
-import {syncNodeDataFromSource, removeSourceNodeMetadata} from "../utils/nodeUtils.ts";
+import {syncNodesFromEdges} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
 import P5Preview from './P5Preview.tsx';
@@ -183,50 +183,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
 
   // Update target nodes when connections change
   useEffect(() => {
-    setNodes((currentNodes) => {
-      const nodeMap = new Map(currentNodes.map(n => [n.id, n]));
-
-      // Track all active connections per target node
-      const activeConnections = new Map<string, Set<string>>();
-      edges.forEach(edge => {
-        if (!activeConnections.has(edge.target)) {
-          activeConnections.set(edge.target, new Set());
-        }
-        activeConnections.get(edge.target)!.add(`${edge.source}:${edge.sourceHandle}`);
-      });
-
-      // Update metadata for all nodes
-      currentNodes.forEach(node => {
-        let updatedNode = node as typeof node;
-        const nodeData = node.data as NodeDataWithMetadata;
-
-        // Remove metadata for disconnected sources
-        if (nodeData.metadata?.sourceNodes) {
-          nodeData.metadata.sourceNodes.forEach((source) => {
-            const connectionKey = `${source.nodeId}:${source.handleType}`;
-            const nodeActiveConnections = activeConnections.get(node.id);
-            const sourceNodeStillExists = nodeMap.has(source.nodeId);
-
-            if (!sourceNodeStillExists || !nodeActiveConnections || !nodeActiveConnections.has(connectionKey)) {
-              updatedNode = removeSourceNodeMetadata(updatedNode, source.nodeId, source.handleType) as typeof node;
-            }
-          });
-        }
-
-        // Add/update metadata for connected sources
-        const incomingEdges = edges.filter(edge => edge.target === node.id);
-        incomingEdges.forEach(edge => {
-          const sourceNode = currentNodes.find(n => n.id === edge.source);
-          if (sourceNode) {
-            updatedNode = syncNodeDataFromSource(updatedNode, sourceNode, edge.sourceHandle) as typeof node;
-          }
-        });
-
-        nodeMap.set(node.id, updatedNode);
-      });
-
-      return Array.from(nodeMap.values());
-    });
+    setNodes((currentNodes) => syncNodesFromEdges(currentNodes, edges));
   }, [edges, setNodes]);
 
   // Trigger impact animation whenever a node metadata payload changes

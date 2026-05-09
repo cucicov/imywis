@@ -51,3 +51,23 @@ This changelog tracks public releases and delivered changes.
 ### Security
 
 ### Notes
+
+---
+## [1.2.0] - 2026-04-23
+### Summary
+- New fonts available in the Text node. Minor bug fixes.
+
+### Added
+- New fonts in the Text node: Arimo-Regular, ChangaOne-Regular, HomeVideo-Regular, LiberationMono-Regular, PixelatedElegance, RasterForge, Tinos-Regular, Arvo-Regular, Comic-sans, Inter, Orbitron-Regular, PressStart2P-Regular, Roboto, VT323-Regular.
+
+### Changed
+
+### Fixed
+- Bug with background node not scaling properly.
+- Bug with event node click event not working properly in certain cases.
+
+### Removed
+
+### Security
+
+### Notes

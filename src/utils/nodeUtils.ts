@@ -75,7 +75,68 @@ export const updateNodeAndPropagate = (
         });
     }
 
-    console.log(Array.from(nodeMap.values()));
+    return Array.from(nodeMap.values());
+};
+
+export const syncNodesFromEdges = (nodes: Node[], edges: Edge[]): Node[] => {
+    const nodeMap = new Map(nodes.map(node => [node.id, node]));
+
+    const activeConnections = new Map<string, Set<string>>();
+    edges.forEach(edge => {
+        const existing = activeConnections.get(edge.target);
+        const connectionKey = `${edge.source}:${edge.sourceHandle}`;
+
+        if (existing) {
+            existing.add(connectionKey);
+        } else {
+            activeConnections.set(edge.target, new Set([connectionKey]));
+        }
+    });
+
+    nodes.forEach(node => {
+        let updatedNode = node;
+        const metadata = node.data.metadata as NodeMetadata | undefined;
+
+        metadata?.sourceNodes.forEach(source => {
+            const connectionKey = `${source.nodeId}:${source.handleType}`;
+            const nodeActiveConnections = activeConnections.get(node.id);
+            const sourceNodeStillExists = nodeMap.has(source.nodeId);
+
+            if (!sourceNodeStillExists || !nodeActiveConnections || !nodeActiveConnections.has(connectionKey)) {
+                updatedNode = removeSourceNodeMetadata(updatedNode, source.nodeId, source.handleType);
+            }
+        });
+
+        nodeMap.set(node.id, updatedNode);
+    });
+
+    let hasChanges = true;
+    let iterations = 0;
+    const maxIterations = Math.max(1, nodes.length * Math.max(1, edges.length));
+
+    while (hasChanges && iterations < maxIterations) {
+        iterations += 1;
+        hasChanges = false;
+
+        edges.forEach(edge => {
+            const targetNode = nodeMap.get(edge.target);
+            const sourceNode = nodeMap.get(edge.source);
+
+            if (!targetNode || !sourceNode) {
+                return;
+            }
+
+            const previousMetadataSignature = getMetadataSignature(targetNode);
+            const updatedTargetNode = syncNodeDataFromSource(targetNode, sourceNode, edge.sourceHandle);
+            const nextMetadataSignature = getMetadataSignature(updatedTargetNode);
+
+            if (previousMetadataSignature !== nextMetadataSignature) {
+                hasChanges = true;
+                nodeMap.set(edge.target, updatedTargetNode);
+            }
+        });
+    }
+
     return Array.from(nodeMap.values());
 };
 
@@ -86,7 +147,10 @@ export const syncNodeDataFromSource = (
 ): Node => {
     if (!sourceNode || !sourceHandle) return targetNode;
 
-    const metadata: NodeMetadata = (targetNode.data.metadata as NodeMetadata) || { sourceNodes: [] };
+    const existingMetadata = targetNode.data.metadata as NodeMetadata | undefined;
+    const metadata: NodeMetadata = {
+        sourceNodes: [...(existingMetadata?.sourceNodes ?? [])],
+    };
     const sourceData = sourceNode.data as Record<string, unknown>;
     const isPageToEventConnection =
         sourceNode.type === NODE_TYPES.PAGE && targetNode.type === NODE_TYPES.EVENT;
@@ -112,7 +176,7 @@ export const syncNodeDataFromSource = (
         nodeId: sourceNode.id,
         type: sourceNode.type || 'unknown',
         handleType: sourceHandle,
-        data: dataToStore,
+        data: cloneMetadataData(dataToStore),
     };
 
     if (existingIndex >= 0) {
@@ -130,6 +194,31 @@ export const syncNodeDataFromSource = (
             metadata,
         },
     };
+};
+
+const cloneMetadataData = (value: Record<string, unknown>): Record<string, unknown> => {
+    const cloneValue = (item: unknown): unknown => {
+        if (Array.isArray(item)) {
+            return item.map(cloneValue);
+        }
+
+        if (typeof item !== 'object' || item === null) {
+            return item;
+        }
+
+        const output: Record<string, unknown> = {};
+        Object.entries(item as Record<string, unknown>).forEach(([key, nestedValue]) => {
+            output[key] = cloneValue(nestedValue);
+        });
+        return output;
+    };
+
+    return cloneValue(value) as Record<string, unknown>;
+};
+
+const getMetadataSignature = (node: Node) => {
+    const metadata = node.data.metadata as NodeMetadata | undefined;
+    return JSON.stringify(metadata?.sourceNodes ?? []);
 };
 
 export const removeSourceNodeMetadata = (

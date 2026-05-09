@@ -9,6 +9,7 @@ import {
   getLatestSelectedPageNameFromSession,
   LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT,
 } from '../utils/sessionStorage.ts';
+import {ensureProjectFontsLoaded, PROJECT_FONT_OPTIONS} from '../utils/fontRegistry.ts';
 
 type P5BackgroundProps = {
   nodes: Node[];
@@ -58,6 +59,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const tilePatternCanvasCacheRef = useRef<WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>>(new WeakMap());
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
+  const [fontsReady, setFontsReady] = useState(PROJECT_FONT_OPTIONS.length === 0);
 
   const selectedPageNode = useMemo(() => {
     const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
@@ -140,7 +142,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     p5Instance.cursor(imagePath);
   };
 
-  const requestRedraw = () => {
+  const requestRedraw = useCallback(() => {
     const p5Instance = p5InstanceRef.current;
     if (!p5Instance) {
       return;
@@ -172,7 +174,25 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       lastRedrawAtRef.current = Date.now();
       p5InstanceRef.current?.redraw();
     }, minIntervalMs - elapsed);
-  };
+  }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    void ensureProjectFontsLoaded().then(() => {
+      if (!isActive) {
+        return;
+      }
+
+      setFontsReady(true);
+      renderSignatureRef.current = '';
+      requestRedraw();
+    });
+
+    return () => {
+      isActive = false;
+    };
+  }, [requestRedraw]);
 
   const maybeCompletePreviewLoad = useCallback((token: number) => {
     if (token !== previewLoadTokenRef.current) {
@@ -386,7 +406,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       }
       maybeCompletePreviewLoad(previewLoadTokenRef.current);
     }
-  }, [maybeCompletePreviewLoad, pageNodeData]);
+  }, [fontsReady, maybeCompletePreviewLoad, pageNodeData, requestRedraw]);
 
   useEffect(() => {
     return () => {
@@ -420,7 +440,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }
 
     requestRedraw();
-  }, [getPageDimensions, pageNodeData?.width, pageNodeData?.height]);
+  }, [getPageDimensions, pageNodeData?.width, pageNodeData?.height, requestRedraw]);
 
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
     const dimensions = getPageDimensions();
@@ -927,10 +947,10 @@ const logPreviewTiming = (label: string, startedAt: number, details?: Record<str
     return;
   }
   if (details) {
-    console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`, details);
+    // console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`, details);
     return;
   }
-  console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`);
+  // console.debug(`[P5Preview] ${label}: ${duration.toFixed(1)}ms`);
 };
 
 const getImageSourcePath = (data: Partial<ImageNodeData> | null | undefined) => {

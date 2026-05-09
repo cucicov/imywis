@@ -5,6 +5,7 @@ import {NODE_TYPES, type TextNodeData} from '../../types/nodeTypes';
 import {HandleTypes} from '../../types/handleTypes';
 import {APP_CONFIG} from '../../config/appConfig.ts';
 import CumulativeCenterSlider from '../CumulativeCenterSlider.tsx';
+import {TEXT_FONT_OPTIONS} from '../../utils/fontRegistry.ts';
 
 const labelStyle: CSSProperties = {
     fontSize: '10px',
@@ -251,7 +252,15 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         onChange={onFieldChange}
                         style={inputStyle}
                     >
-                            <option value="sans-serif">Default</option>
+                            {TEXT_FONT_OPTIONS.map((fontOption) => (
+                                <option
+                                    key={fontOption.value}
+                                    value={fontOption.value}
+                                    style={{fontFamily: fontOption.value}}
+                                >
+                                    {fontOption.label}
+                                </option>
+                            ))}
                         </select>
                         <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px 10px', marginTop: '4px', maxWidth: '170px'}}>
                             {[
