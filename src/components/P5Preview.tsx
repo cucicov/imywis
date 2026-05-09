@@ -941,7 +941,7 @@ const shouldProfilePreview = () => {
   return Boolean((window as Window & {__IMYWIS_PREVIEW_PROFILE?: boolean}).__IMYWIS_PREVIEW_PROFILE);
 };
 
-const logPreviewTiming = (label: string, startedAt: number, details?: Record<string, unknown>) => {
+const logPreviewTiming = (_label: string, startedAt: number, details?: Record<string, unknown>) => {
   const duration = performance.now() - startedAt;
   if (!shouldProfilePreview() && duration < 24) {
     return;
