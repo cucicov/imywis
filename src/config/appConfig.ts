@@ -1,10 +1,10 @@
 const normalizeBaseUrl = (value: string): string => value.replace(/\/+$/, '');
 
 const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8080';
-const DEFAULT_PROD_API_BASE_URL = 'https://beautifulneon.xyz';
+const DEFAULT_PROD_API_BASE_URL = 'https://illmissyouwheniscroll.net';
 const NODES_API_PATH = '/api/nodes';
 const DEFAULT_TESTING_PUBLISH_REDIRECT_URL = 'http://localhost:8080/test';
-const DEFAULT_PROD_PUBLISH_REDIRECT_URL = 'https://www.beautifulneon.xyz/test';
+const DEFAULT_PROD_PUBLISH_REDIRECT_URL = 'https://illmissyouwheniscroll.net/test';
 const DEFAULT_METADATA_EXPANDED_IN_DEV = true;
 const DEFAULT_METADATA_EXPANDED_IN_PROD = false;
 

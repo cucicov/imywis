@@ -71,3 +71,20 @@ This changelog tracks public releases and delivered changes.
 ### Security
 
 ### Notes
+---
+## [1.2.2] - 2026-05-12
+### Summary
+- Backend security updates.
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Security
+- userId supabase check on publish.
+
+### Notes
