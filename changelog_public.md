@@ -88,3 +88,20 @@ This changelog tracks public releases and delivered changes.
 - userId supabase check on publish.
 
 ### Notes
+---
+## [1.2.3] - 2026-05-13
+### Summary
+- Drag and drop images are saved in the database.
+
+### Added
+
+### Changed
+
+### Fixed
+- Local images are now saved in the database. This means that the project is editable even after clearing cache or if accessed from another computer.
+
+### Removed
+
+### Security
+
+### Notes

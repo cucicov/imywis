@@ -93,6 +93,17 @@ type NodeDataWithMetadata = {
 const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Prevent deletion of the first page node
+  const handleNodesChange = useCallback((changes: any[]) => {
+    const filteredChanges = changes.filter((change) => {
+      if (change.type === 'remove' && change.id === '1') {
+        return false; // Block deletion of first page node
+      }
+      return true;
+    });
+    onNodesChange(filteredChanges);
+  }, [onNodesChange]);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -408,7 +419,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onSelectionChange={onSelectionChange}
           onNodeClick={onNodeClick}

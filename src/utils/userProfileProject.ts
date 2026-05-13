@@ -28,32 +28,33 @@ export const saveProjectDataToUserProfile = async (
 };
 
 const sanitizeProjectForProfileStorage = (projectData: ExportedNodesJson): ExportedNodesJson => {
-  const sanitizedNodes = projectData.nodes.map((node) => ({
-    ...node,
-    data: stripLocalImageDataUrl(node.data) as Record<string, unknown>,
-  }));
-
-  return {
-    nodes: sanitizedNodes,
-    edges: projectData.edges,
-  };
+  // const sanitizedNodes = projectData.nodes.map((node) => ({
+  //   ...node,
+  //   data: stripLocalImageDataUrl(node.data) as Record<string, unknown>,
+  // }));
+  //
+  // return {
+  //   nodes: sanitizedNodes,
+  //   edges: projectData.edges,
+  // };
+  return projectData;
 };
 
-const stripLocalImageDataUrl = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.map((item) => stripLocalImageDataUrl(item));
-  }
-
-  if (typeof value !== 'object' || value === null) {
-    return value;
-  }
-
-  const output: Record<string, unknown> = {};
-  Object.entries(value as Record<string, unknown>).forEach(([key, nestedValue]) => {
-    if (key === 'localImageDataUrl') {
-      return;
-    }
-    output[key] = stripLocalImageDataUrl(nestedValue);
-  });
-  return output;
-};
+// const stripLocalImageDataUrl = (value: unknown): unknown => {
+//   if (Array.isArray(value)) {
+//     return value.map((item) => stripLocalImageDataUrl(item));
+//   }
+//
+//   if (typeof value !== 'object' || value === null) {
+//     return value;
+//   }
+//
+//   const output: Record<string, unknown> = {};
+//   Object.entries(value as Record<string, unknown>).forEach(([key, nestedValue]) => {
+//     if (key === 'localImageDataUrl') {
+//       return;
+//     }
+//     output[key] = stripLocalImageDataUrl(nestedValue);
+//   });
+//   return output;
+// };
