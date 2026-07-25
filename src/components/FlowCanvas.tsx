@@ -13,10 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import '@xyflow/react/dist/style.css';
 import PageNode from './nodes/PageNode.tsx';
-import AddPageNodeButton from './nodes/buttons/AddPageNodeButton.tsx';
-import AddImageNodeButton from "./nodes/buttons/AddImageNodeButton.tsx";
 import ImageNode from "./nodes/ImageNode.tsx";
-import NodeStateTransfer from "./nodes/NodeStateTransfer.tsx";
 import type {PageNodeData} from "../types/nodeTypes.ts";
 import {syncNodesFromEdges} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
@@ -24,23 +21,18 @@ import {CONNECTION_RULES} from "../types/handleTypes.ts";
 import P5Preview from './P5Preview.tsx';
 import ExportP5Project from './ExportP5Project.tsx';
 import BackgroundNode from './nodes/BackgroundNode.tsx';
-import AddBackgroundNodeButton from './nodes/buttons/AddBackgroundNodeButton.tsx';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
 import TextNode from './nodes/TextNode.tsx';
-import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
 import EventNode from './nodes/EventNode.tsx';
-import AddEventNodeButton from './nodes/buttons/AddEventNodeButton.tsx';
 import ExternalLinkNode from './nodes/ExternalLinkNode.tsx';
-import AddExternalLinkNodeButton from './nodes/buttons/AddExternalLinkNodeButton.tsx';
-import LatestSelectedPageNameBadge from './nodes/buttons/LatestSelectedPageNameBadge.tsx';
 import {
   getLatestSelectedPageNameFromSession,
   setLatestSelectedPageNameInSession,
 } from '../utils/sessionStorage.ts';
 import {supabase} from '../utils/supabaseClient.ts';
-import AutosaveToggle from './AutosaveToggle.tsx';
 import {getLocalImageDataUrl} from '../utils/localImageCache.ts';
 import ChangeLogPopUp from './ChangeLogPopUp.tsx';
+import AddNodesDropdown from './AddNodesDropdown.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -113,6 +105,41 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     width: window.innerWidth,
     height: window.innerHeight,
   }));
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [autosaveEnabled, setAutosaveEnabled] = useState(false);
+  const latestNodesRef = useRef(nodes);
+  const latestEdgesRef = useRef(edges);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    latestNodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    latestEdgesRef.current = edges;
+  }, [edges]);
+
+  useEffect(() => {
+    if (!autosaveEnabled) {
+      return;
+    }
+
+    const intervalId = window.setInterval(async () => {
+      try {
+        await supabase
+          .from('user_profiles')
+          .update({ data: { nodes: latestNodesRef.current, edges: latestEdgesRef.current } })
+          .eq('user_id', session.user.id);
+        setLastSavedAt(new Date());
+      } catch (error) {
+        console.error('Autosave failed:', error);
+      }
+    }, 60000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [autosaveEnabled, session.user.id]);
 
   useEffect(() => {
     let isActive = true;
@@ -363,6 +390,59 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     return true;
   }, [edges, nodes]);
 
+  const toggleDropdown = (name: string) => {
+    setOpenDropdown(openDropdown === name ? null : name);
+  };
+
+  const handleExportNodes = () => {
+    const payload = { nodes, edges };
+    const json = JSON.stringify(payload, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'nodes.json';
+    link.click();
+
+    URL.revokeObjectURL(url);
+  };
+
+  const handleLoadNodes = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result)) as
+          | Node[]
+          | { nodes?: Node[]; edges?: Edge[] };
+        if (Array.isArray(parsed)) {
+          setNodes(parsed);
+          return;
+        }
+        if (parsed && typeof parsed === 'object') {
+          if (Array.isArray(parsed.nodes)) {
+            setNodes(parsed.nodes);
+          }
+          if (Array.isArray(parsed.edges)) {
+            setEdges(parsed.edges);
+          }
+        }
+      } catch {
+        // Ignore invalid JSON
+      }
+    };
+    reader.readAsText(file);
+
+    event.target.value = '';
+  };
+
   return (
     <>
       <div style={{
@@ -373,16 +453,116 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
-        gap: '16px',
+        justifyContent: 'space-between',
+        gap: '8px',
         backgroundColor: 'rgb(26, 25, 43)',
         borderBottom: '1px solid #e0e0e0',
-        padding: '8px',
+        padding: '6px 12px',
         zIndex: 9999
       }}>
-        <p style={{fontSize: '10px'}}>{session.user.email}</p>
-        <button onClick={handleLogout} style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}>Logout</button>
+        <div style={{display: 'flex', gap: '8px', alignItems: 'center', flex: 1}}>
+          {/* Add Nodes Dropdown - rendered inside ReactFlow */}
+          <button
+            onClick={() => toggleDropdown('add')}
+            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}
+          >
+            Add ▾
+          </button>
+
+          {/* Settings Dropdown */}
+          <div style={{position: 'relative'}}>
+            <button
+              onClick={() => toggleDropdown('settings')}
+              style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}
+            >
+              Settings ▾
+            </button>
+            {openDropdown === 'settings' && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                marginTop: '4px',
+                backgroundColor: 'rgb(26, 25, 43)',
+                border: '1px solid #ccc',
+                borderRadius: '4px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                padding: '8px',
+                minWidth: '200px',
+                zIndex: 10000
+              }}>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  <label style={{fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                    <input
+                      type="checkbox"
+                      checked={animationsEnabled}
+                      onChange={(e) => setAnimationsEnabled(e.target.checked)}
+                    />
+                    Animations
+                  </label>
+                  <label style={{fontSize: '11px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'}}>
+                    <input
+                      type="checkbox"
+                      checked={autosaveEnabled}
+                      onChange={(e) => setAutosaveEnabled(e.target.checked)}
+                    />
+                    Autosave
+                  </label>
+                  {lastSavedAt && (
+                    <div style={{fontSize: '9px', color: '#666', marginTop: '4px'}}>
+                      Last saved: {lastSavedAt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'})}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Preview Toggle */}
+          <label style={{fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'white'}}>
+            <input
+              type="checkbox"
+              checked={previewEnabled}
+              onChange={(e) => setPreviewEnabled(e.target.checked)}
+            />
+            <span style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>
+              Preview: {latestSelectedPageName}
+            </span>
+          </label>
+        </div>
+
+        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+          <button
+            onClick={handleLoadNodes}
+            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}
+          >
+            Load Nodes
+          </button>
+          <button
+            onClick={handleExportNodes}
+            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}
+          >
+            Export Nodes
+          </button>
+          <ExportP5Project
+            nodes={nodes}
+            edges={edges}
+            session={session}
+            onSavedAtChange={setLastSavedAt}
+          />
+          <p style={{fontSize: '10px', margin: 0}}>{session.user.email}</p>
+          <button onClick={handleLogout} style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}>
+            Logout
+          </button>
+        </div>
       </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
       <div
         id="imywis-flow-scroll-container"
         className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
@@ -398,39 +578,6 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           }}
         >
         <ChangeLogPopUp />
-        <button
-          type="button"
-          onClick={() => setAnimationsEnabled((value) => !value)}
-          style={{
-            position: 'absolute',
-            top: '8px',
-            right: '328px',
-            zIndex: 1000,
-            borderRadius: '6px',
-            border: '1px solid #8a8a8a',
-            backgroundColor: animationsEnabled ? '#f3f7ff' : '#f5f5f5',
-            color: '#202020',
-            padding: '8px 12px',
-            fontSize: '12px',
-            fontWeight: 700,
-            letterSpacing: '0.02em',
-          }}
-        >
-          {animationsEnabled ? 'Animations: ON' : 'Animations: OFF'}
-        </button>
-        <AutosaveToggle
-          nodes={nodes}
-          edges={edges}
-          session={session}
-          lastSavedAt={lastSavedAt}
-          onSavedAtChange={setLastSavedAt}
-        />
-        <ExportP5Project
-          nodes={nodes}
-          edges={edges}
-          session={session}
-          onSavedAtChange={setLastSavedAt}
-        />
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -445,18 +592,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           style={{ width: '100%', height: '100%' }}
         >
           {previewEnabled ? <P5Preview nodes={nodes} /> : null}
-          <NodeStateTransfer />
-          <AddPageNodeButton />
-          <AddImageNodeButton />
-          <AddBackgroundNodeButton />
-          <AddTextNodeButton />
-          <AddEventNodeButton />
-          <AddExternalLinkNodeButton />
-          <LatestSelectedPageNameBadge
-            pageName={latestSelectedPageName}
-            previewEnabled={previewEnabled}
-            onPreviewEnabledChange={setPreviewEnabled}
-          />
+          <AddNodesDropdown isOpen={openDropdown === 'add'} />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>
       </div>
