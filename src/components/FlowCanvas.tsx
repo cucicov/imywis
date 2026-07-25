@@ -364,24 +364,39 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   }, [edges, nodes]);
 
   return (
-    <div
-      id="imywis-flow-scroll-container"
-      className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
-      style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}
-    >
-      <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: '16px'}}>
+    <>
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+        backgroundColor: 'rgb(26, 25, 43)',
+        borderBottom: '1px solid #e0e0e0',
+        padding: '8px',
+        zIndex: 9999
+      }}>
         <p style={{fontSize: '10px'}}>{session.user.email}</p>
         <button onClick={handleLogout} style={{ padding: '0.25rem 0.5rem', fontSize: '0.7rem' }}>Logout</button>
       </div>
       <div
-        style={{
-          width: `${sceneSize.width}px`,
-          height: `${sceneSize.height}px`,
-          minWidth: '100%',
-          minHeight: '100%',
-          position: 'relative',
-        }}
+        id="imywis-flow-scroll-container"
+        className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
+        style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}
       >
+        <div
+          style={{
+            width: `${sceneSize.width}px`,
+            height: `${sceneSize.height}px`,
+            minWidth: '100%',
+            minHeight: '100%',
+            position: 'relative',
+          }}
+        >
         <ChangeLogPopUp />
         <button
           type="button"
@@ -446,6 +461,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         </ReactFlow>
       </div>
     </div>
+    </>
   );
 };
 

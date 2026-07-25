@@ -581,13 +581,17 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     requestRedraw();
   };
 
+  const dimensions = getPageDimensions();
+  const containerWidth = dimensions?.width ?? window.innerWidth;
+  const containerHeight = dimensions?.height ?? window.innerHeight;
+
   return (
     <div style={{
       position: 'absolute',
       top: 0,
       left: 0,
-      width: '100%',
-      height: '100%',
+      width: `${containerWidth}px`,
+      height: `${containerHeight}px`,
       zIndex: 0,
       pointerEvents: 'none'
     }}>

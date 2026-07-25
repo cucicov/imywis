@@ -31,3 +31,27 @@ values (new.id, user_handle);
 
 return new;
 end;
+
+-- insert update timestamp trigger.
+-- Function
+create or replace function public.set_updated_at_on_data_change()
+returns trigger
+language plpgsql
+as $$
+begin
+  -- Update updated_at only if "data" changed
+  if NEW.data is distinct from OLD.data then
+    NEW.updated_at = now();
+end if;
+
+return NEW;
+end;
+$$;
+-- Trigger
+drop trigger if exists trg_set_updated_at_on_data_change
+on public.user_profiles;
+
+create trigger trg_set_updated_at_on_data_change
+    before update on public.user_profiles
+    for each row
+    execute function public.set_updated_at_on_data_change();
