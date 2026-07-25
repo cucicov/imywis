@@ -534,13 +534,13 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
         <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
           <button
             onClick={handleLoadNodes}
-            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}
+            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgba(26, 25, 43, 0.5)', cursor: 'pointer', opacity: 0.7}}
           >
             Load Nodes
           </button>
           <button
             onClick={handleExportNodes}
-            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}
+            style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgba(26, 25, 43, 0.5)', cursor: 'pointer', opacity: 0.7}}
           >
             Export Nodes
           </button>
@@ -572,7 +572,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       <div
         id="imywis-flow-scroll-container"
         className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
-        style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto' }}
+        style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto', paddingTop: '40px' }}
       >
         <div
           style={{
