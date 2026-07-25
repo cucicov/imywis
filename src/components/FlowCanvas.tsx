@@ -110,6 +110,9 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const latestNodesRef = useRef(nodes);
   const latestEdgesRef = useRef(edges);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedNodesRef = useRef<Node[]>([]);
+  const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
+  const [copiedEdges, setCopiedEdges] = useState<Edge[]>([]);
 
   useEffect(() => {
     latestNodesRef.current = nodes;
@@ -190,6 +193,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   }, []);
 
   const onSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node[] }) => {
+    selectedNodesRef.current = selectedNodes;
     const selectedPageNode = selectedNodes.find((node) => node.type === NODE_TYPES.PAGE);
     if (selectedPageNode) {
       persistSelectedPageNode(selectedPageNode);
@@ -442,6 +446,105 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
 
     event.target.value = '';
   };
+
+  const handleCopy = useCallback(() => {
+    const selected = selectedNodesRef.current;
+    if (selected.length === 0) return;
+
+    // Get IDs of selected nodes
+    const selectedIds = new Set(selected.map(n => n.id));
+
+    // Find edges that connect only between selected nodes (internal connections)
+    const internalEdges = edges.filter(edge =>
+      selectedIds.has(edge.source) && selectedIds.has(edge.target)
+    );
+
+    setCopiedNodes(selected);
+    setCopiedEdges(internalEdges);
+  }, [edges]);
+
+  const handlePaste = useCallback(() => {
+    if (copiedNodes.length === 0) return;
+
+    // Generate new IDs for pasted nodes
+    const maxId = nodes.length > 0 ? Math.max(...nodes.map(n => Number(n.id) || 0)) : 0;
+    const idMap = new Map<string, string>();
+
+    copiedNodes.forEach((node, index) => {
+      const newId = `${maxId + index + 1}`;
+      idMap.set(node.id, newId);
+    });
+
+    // Clone nodes with new IDs and offset position
+    const newNodes: Node[] = copiedNodes.map(node => {
+      const newId = idMap.get(node.id)!;
+      return {
+        ...node,
+        id: newId,
+        position: {
+          x: node.position.x + 50,
+          y: node.position.y + 50,
+        },
+        data: {
+          ...node.data,
+          // Remove connection impact key to avoid animation artifacts
+          connectionImpactKey: undefined,
+        },
+        selected: true,
+      };
+    });
+
+    // Clone internal edges with remapped IDs
+    const newEdges: Edge[] = copiedEdges.map(edge => {
+      const newSource = idMap.get(edge.source);
+      const newTarget = idMap.get(edge.target);
+
+      if (!newSource || !newTarget) {
+        return null;
+      }
+
+      return {
+        ...edge,
+        id: `${newSource}-${newTarget}-${edge.sourceHandle}-${edge.targetHandle}`,
+        source: newSource,
+        target: newTarget,
+      };
+    }).filter((edge): edge is Edge => edge !== null);
+
+    // Deselect existing nodes and add new nodes with selection
+    setNodes(currentNodes => [
+      ...currentNodes.map(n => ({ ...n, selected: false })),
+      ...newNodes
+    ]);
+    setEdges(currentEdges => [...currentEdges, ...newEdges]);
+  }, [copiedNodes, copiedEdges, nodes, setNodes, setEdges]);
+
+  // Keyboard event listener for copy/paste
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isCtrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
+
+      // Ignore if user is typing in an input or textarea
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (isCtrlOrCmd && event.key === 'c') {
+        event.preventDefault();
+        handleCopy();
+      } else if (isCtrlOrCmd && event.key === 'v') {
+        event.preventDefault();
+        handlePaste();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleCopy, handlePaste]);
 
   return (
     <>
