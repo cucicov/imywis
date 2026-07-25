@@ -544,12 +544,18 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           >
             Export Nodes
           </button>
+        </div>
+
+        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
           <ExportP5Project
             nodes={nodes}
             edges={edges}
             session={session}
             onSavedAtChange={setLastSavedAt}
           />
+        </div>
+
+        <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
           <p style={{fontSize: '10px', margin: 0}}>{session.user.email}</p>
           <button onClick={handleLogout} style={{padding: '4px 8px', fontSize: '11px', border: '1px solid #ccc', borderRadius: '4px', background: 'rgb(26, 25, 43)', cursor: 'pointer'}}>
             Logout

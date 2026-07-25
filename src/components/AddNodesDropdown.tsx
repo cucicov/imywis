@@ -41,7 +41,7 @@ const AddNodesDropdown = ({ isOpen }: AddNodesDropdownProps) => {
           z-index: auto !important;
         }
         .add-nodes-dropdown button:hover {
-          background: #f5f5f5 !important;
+          background: #103B46 !important;
         }
       `}</style>
       <AddPageNodeButton />

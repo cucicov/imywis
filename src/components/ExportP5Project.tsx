@@ -31,24 +31,21 @@ type SerializablePageData = {
 };
 
 const buttonStyle: CSSProperties = {
-    position: 'absolute',
-    top: '52px',
-    right: '12px',
-    zIndex: 2,
-    padding: '8px 12px',
-    borderRadius: '10px',
-    border: '1px solid #fff',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    border: '1px solid #1e6f5c',
     background: '#1e6f5c',
     color: '#fff',
-    fontSize: '12px',
+    fontSize: '11px',
     cursor: 'pointer',
 };
 
 const statusWrapperStyle: CSSProperties = {
-    position: 'absolute',
-    top: '98px',
-    right: '12px',
-    zIndex: 2,
+    position: 'fixed',
+    top: '50px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 10001,
     width: '320px',
     borderRadius: '12px',
     border: '1px solid rgba(255, 255, 255, 0.25)',
