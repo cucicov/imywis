@@ -105,3 +105,23 @@ This changelog tracks public releases and delivered changes.
 ### Security
 
 ### Notes
+---
+## [1.3.0] - 2026-07-25
+### Summary
+- UI improvements on the client.
+
+### Added
+- Copy-Paste now works on components with CTRL+C/CTRL+V or CMD+C/CMD+V(mac).
+- Delete key now works to remove components.
+
+### Changed
+- UI buttons moved to sticky header.
+
+### Fixed
+
+### Removed
+
+### Security
+
+### Notes
+- To copy paste nodes, select with SHIFT+mouse drag and then CTRL+C/CMD+C -> CTRL+V/CMD+V.
