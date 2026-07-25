@@ -50,14 +50,14 @@ const AddPageNodeButton = () => {
                 zIndex: 10,
                 padding: '10px 20px',
                 backgroundColor: '#1a192b',
-                color: 'white',
+                color: '#FBB38D',
                 border: 'none',
                 borderRadius: '5px',
                 cursor: 'pointer',
                 fontSize: '14px',
             }}
         >
-            Add Image Node
+            Image Node
         </button>
     );
 };

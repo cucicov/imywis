@@ -50,14 +50,14 @@ const AddPageNodeButton = () => {
                 zIndex: 10,
                 padding: '10px 20px',
                 backgroundColor: '#1a192b',
-                color: 'white',
+                color: '#D05774',
                 border: 'none',
                 borderRadius: '5px',
                 cursor: 'pointer',
                 fontSize: '14px',
             }}
         >
-            Add Page Node
+            Page Node
         </button>
     );
 };

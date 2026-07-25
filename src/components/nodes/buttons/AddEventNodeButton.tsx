@@ -47,14 +47,14 @@ const AddEventNodeButton = () => {
                 zIndex: 10,
                 padding: '10px 20px',
                 backgroundColor: '#1a192b',
-                color: 'white',
+                color: '#6BC8CD',
                 border: 'none',
                 borderRadius: '5px',
                 cursor: 'pointer',
                 fontSize: '14px',
             }}
         >
-            Add Event Node
+            Event Node
         </button>
     );
 };

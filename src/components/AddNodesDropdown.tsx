@@ -32,7 +32,7 @@ const AddNodesDropdown = ({ isOpen }: AddNodesDropdownProps) => {
           position: static !important;
           padding: 8px 12px !important;
           background: transparent !important;
-          color: #0FF0FF !important;
+          // color: #0FF0FF !important;
           border: none !important;
           border-radius: 0 !important;
           text-align: left !important;
