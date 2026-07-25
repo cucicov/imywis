@@ -697,6 +697,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           isValidConnection={isValidConnection}
+          deleteKeyCode={['Backspace', 'Delete']}
           fitView
           style={{ width: '100%', height: '100%' }}
         >
