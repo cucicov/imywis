@@ -4,6 +4,7 @@ export const NODE_TYPES = {
     BACKGROUND: 'backgroundNode',
     TEXT: 'textNode',
     EVENT: 'eventNode',
+    MASK: 'maskNode',
     EXTERNAL_LINK: 'externalLinkNode',
 } as const;
 
@@ -84,6 +85,15 @@ export type EventType = 'click' | 'mouse over';
 
 export type EventNodeData = BaseNodeData & {
     type?: EventType;
+    metadata?: NodeMetadata;
+};
+
+export type MaskNodeData = BaseNodeData & {
+    width?: number;
+    height?: number;
+    positionX?: number;
+    positionY?: number;
+    backgroundColor?: string;
     metadata?: NodeMetadata;
 };
 

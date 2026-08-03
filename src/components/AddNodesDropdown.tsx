@@ -4,6 +4,7 @@ import AddBackgroundNodeButton from './nodes/buttons/AddBackgroundNodeButton.tsx
 import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
 import AddEventNodeButton from './nodes/buttons/AddEventNodeButton.tsx';
 import AddExternalLinkNodeButton from './nodes/buttons/AddExternalLinkNodeButton.tsx';
+import AddMaskNodeButton from './nodes/buttons/AddMaskNodeButton.tsx';
 
 type AddNodesDropdownProps = {
   isOpen: boolean;
@@ -49,6 +50,7 @@ const AddNodesDropdown = ({ isOpen }: AddNodesDropdownProps) => {
       <AddBackgroundNodeButton />
       <AddTextNodeButton />
       <AddEventNodeButton />
+      <AddMaskNodeButton />
       <AddExternalLinkNodeButton />
     </div>
   );

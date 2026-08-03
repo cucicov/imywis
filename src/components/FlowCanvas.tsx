@@ -25,6 +25,7 @@ import {toNumberOrNull} from '../utils/numberUtils.ts';
 import TextNode from './nodes/TextNode.tsx';
 import EventNode from './nodes/EventNode.tsx';
 import ExternalLinkNode from './nodes/ExternalLinkNode.tsx';
+import MaskNode from './nodes/MaskNode.tsx';
 import {
   getLatestSelectedPageNameFromSession,
   setLatestSelectedPageNameInSession,
@@ -40,6 +41,7 @@ const nodeTypes = {
   backgroundNode: BackgroundNode,
   textNode: TextNode,
   eventNode: EventNode,
+  maskNode: MaskNode,
   externalLinkNode: ExternalLinkNode,
 };
 

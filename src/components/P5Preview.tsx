@@ -1,8 +1,8 @@
 import Sketch from 'react-p5';
 import type p5 from 'react-p5/node_modules/@types/p5';
 import type { Node } from '@xyflow/react';
-import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type NodeMetadata, type PageNodeData, type TextNodeData} from '../types/nodeTypes';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type MaskNodeData, type NodeMetadata, type PageNodeData, type TextNodeData} from '../types/nodeTypes';
+import {useCallback, useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
 import {
   DEFAULT_LATEST_SELECTED_PAGE_NAME,
@@ -83,6 +83,9 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   }, [latestSelectedPageName, nodes]);
   const pageNodeData = selectedPageNode?.data as PageNodeData | undefined;
   const selectedPageNodeId = selectedPageNode?.id ?? null;
+  const maskMetadataList = useMemo(() => pageNodeData?.metadata?.sourceNodes.filter(
+    source => source.type === NODE_TYPES.MASK
+  ) ?? [], [pageNodeData]);
 
   const getPageDimensions = useCallback(() => {
     const width = toNumberOrNull(pageNodeData?.width);
@@ -596,6 +599,11 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       pointerEvents: 'none'
     }}>
       <Sketch setup={setup} draw={draw} windowResized={windowResized} />
+      <div style={{position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none'}}>
+        {maskMetadataList.map((maskMetadata) => (
+          <MaskPreview key={maskMetadata.nodeId} data={maskMetadata.data as MaskNodeData} />
+        ))}
+      </div>
       {isPreviewLoading && (
         <div
           style={{
@@ -626,6 +634,79 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       )}
     </div>
   );
+};
+
+const MaskPreview = ({data}: {data: MaskNodeData}) => {
+  const child = data.metadata?.sourceNodes.find(
+    source => source.type === NODE_TYPES.IMAGE || source.type === NODE_TYPES.TEXT
+  );
+  if (!child) {
+    return null;
+  }
+
+  const childData = child.data as Partial<ImageNodeData & TextNodeData>;
+  const maskWidth = positiveNumberOrNull(data.width);
+  const maskHeight = positiveNumberOrNull(data.height);
+  const childWidth = positiveNumberOrNull(childData.width);
+  const childHeight = positiveNumberOrNull(childData.height);
+  const wrapperStyle: CSSProperties = {
+    position: 'absolute',
+    left: toNumberOrNull(data.positionX) ?? 0,
+    top: toNumberOrNull(data.positionY) ?? 0,
+    width: maskWidth ?? childWidth ?? 'max-content',
+    height: maskHeight ?? childHeight ?? 'max-content',
+    backgroundColor: resolveTextColor(data.backgroundColor, '#ffffff'),
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  };
+
+  if (child.type === NODE_TYPES.IMAGE) {
+    const imageData = child.data as Partial<ImageNodeData>;
+    const source = getImageSourcePath(imageData);
+    if (!source) {
+      return null;
+    }
+
+    const imageStyle: CSSProperties = {
+      display: 'block',
+      width: imageData.autoWidth ? 'auto' : (positiveNumberOrNull(imageData.width) ?? 'auto'),
+      height: imageData.autoHeight ? 'auto' : (positiveNumberOrNull(imageData.height) ?? 'auto'),
+      opacity: clamp(toNumberOrNull(imageData.opacity) ?? 1, 0, 1),
+      maxWidth: 'none',
+      maxHeight: 'none',
+    };
+    return <div style={wrapperStyle}><img src={source} alt="" draggable={false} style={imageStyle} /></div>;
+  }
+
+  const textData = child.data as Partial<TextNodeData>;
+  const decorations = [textData.underline ? 'underline' : '', textData.strikethrough ? 'line-through' : '']
+    .filter(Boolean).join(' ');
+  const textStyle: CSSProperties = {
+    width: childWidth ?? 250,
+    height: childHeight ?? 120,
+    boxSizing: 'border-box',
+    whiteSpace: 'pre-wrap',
+    overflow: 'hidden',
+    wordBreak: 'break-word',
+    color: resolveTextColor(textData.color),
+    backgroundColor: textData.transparentBackground !== false
+      ? 'transparent'
+      : resolveTextColor(textData.backgroundColor, '#ffffff'),
+    textAlign: resolveTextAlign(textData.align) as CSSProperties['textAlign'],
+    fontFamily: typeof textData.font === 'string' && textData.font.trim() ? textData.font : 'sans-serif',
+    fontSize: Math.max(1, toNumberOrNull(textData.size) ?? 16),
+    fontWeight: toBoolean(textData.bold) ? 700 : 400,
+    fontStyle: toBoolean(textData.italic) ? 'italic' : 'normal',
+    textDecoration: decorations || 'none',
+    textTransform: toBoolean(textData.caps) ? 'uppercase' : 'none',
+    opacity: clamp(toNumberOrNull(textData.opacity) ?? 1, 0, 1),
+  };
+  return <div style={wrapperStyle}><div style={textStyle}>{typeof textData.text === 'string' ? textData.text : ''}</div></div>;
+};
+
+const positiveNumberOrNull = (value: unknown) => {
+  const number = toNumberOrNull(value);
+  return number !== null && number > 0 ? number : null;
 };
 
 const createSceneDrawTasks = ({

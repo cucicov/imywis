@@ -125,3 +125,20 @@ This changelog tracks public releases and delivered changes.
 
 ### Notes
 - To copy paste nodes, select with SHIFT+mouse drag and then CTRL+C/CMD+C -> CTRL+V/CMD+V.
+---
+## [1.3.1] - 2026-08-03
+### Summary
+- New node - Mask.
+
+### Added
+- new Mask node that can be used to mask images and texts. Introduces scrollable content inside the main window page.
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Security
+
+### Notes
