@@ -124,8 +124,8 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
 
     const capturedDimensions = pageAutoDimensionsRef.current!;
     return {
-      width: autoWidth ? capturedDimensions.width : width ?? capturedDimensions.width,
-      height: autoHeight ? capturedDimensions.height : height ?? capturedDimensions.height,
+      width: autoWidth ? Math.max(width ?? 0, capturedDimensions.width) : width ?? capturedDimensions.width,
+      height: autoHeight ? Math.max(height ?? 0, capturedDimensions.height) : height ?? capturedDimensions.height,
     };
   }, [pageNodeData, selectedPageNodeId]);
 
@@ -618,10 +618,10 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const configuredWidth = toNumberOrNull(pageNodeData?.width);
   const configuredHeight = toNumberOrNull(pageNodeData?.height);
   const containerWidth = pageNodeData?.autoWidth === true
-    ? window.innerWidth
+    ? Math.max(configuredWidth ?? 0, window.innerWidth)
     : configuredWidth ?? window.innerWidth;
   const containerHeight = pageNodeData?.autoHeight === true
-    ? window.innerHeight
+    ? Math.max(configuredHeight ?? 0, window.innerHeight)
     : configuredHeight ?? window.innerHeight;
 
   return (
