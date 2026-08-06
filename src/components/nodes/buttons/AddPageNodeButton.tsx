@@ -11,6 +11,8 @@ const AddPageNodeButton = () => {
             name: '',
             width: 100,
             height: 100,
+            autoWidth: false,
+            autoHeight: false,
             mousePointer: '',
             popUp: false,
             backgroundColor: '#ffffff'

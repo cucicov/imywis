@@ -56,6 +56,13 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const hasDrawnForCurrentLoadRef = useRef(false);
   const isPreviewLoadingRef = useRef(true);
   const progressiveRenderRef = useRef<ProgressiveRenderState | null>(null);
+  const pageAutoDimensionsRef = useRef<{
+    pageId: string | null;
+    autoWidth: boolean;
+    autoHeight: boolean;
+    width: number;
+    height: number;
+  } | null>(null);
   const tilePatternCanvasCacheRef = useRef<WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>>(new WeakMap());
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
@@ -88,15 +95,39 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   ) ?? [], [pageNodeData]);
 
   const getPageDimensions = useCallback(() => {
-    const width = toNumberOrNull(pageNodeData?.width);
-    const height = toNumberOrNull(pageNodeData?.height);
-
-    if (width !== null && height !== null) {
-      return { width, height };
+    if (!pageNodeData) {
+      return null;
     }
 
-    return null;
-  }, [pageNodeData]);
+    const width = toNumberOrNull(pageNodeData?.width);
+    const height = toNumberOrNull(pageNodeData?.height);
+    const autoWidth = pageNodeData.autoWidth === true;
+    const autoHeight = pageNodeData.autoHeight === true;
+
+    if (!autoWidth && !autoHeight && (width === null || height === null)) {
+      return null;
+    }
+
+    const snapshot = pageAutoDimensionsRef.current;
+    if (!snapshot
+      || snapshot.pageId !== selectedPageNodeId
+      || snapshot.autoWidth !== autoWidth
+      || snapshot.autoHeight !== autoHeight) {
+      pageAutoDimensionsRef.current = {
+        pageId: selectedPageNodeId,
+        autoWidth,
+        autoHeight,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    }
+
+    const capturedDimensions = pageAutoDimensionsRef.current!;
+    return {
+      width: autoWidth ? capturedDimensions.width : width ?? capturedDimensions.width,
+      height: autoHeight ? capturedDimensions.height : height ?? capturedDimensions.height,
+    };
+  }, [pageNodeData, selectedPageNodeId]);
 
   const setPreviewLoadingState = useCallback((nextValue: boolean) => {
     if (!nextValue && pendingPreviewLoadingTimerRef.current !== null) {
@@ -443,7 +474,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }
 
     requestRedraw();
-  }, [getPageDimensions, pageNodeData?.width, pageNodeData?.height, requestRedraw]);
+  }, [getPageDimensions, pageNodeData?.width, pageNodeData?.height, pageNodeData?.autoWidth, pageNodeData?.autoHeight, requestRedraw]);
 
   const setup = (p5Instance: p5, canvasParentRef: Element) => {
     const dimensions = getPageDimensions();
@@ -584,9 +615,14 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     requestRedraw();
   };
 
-  const dimensions = getPageDimensions();
-  const containerWidth = dimensions?.width ?? window.innerWidth;
-  const containerHeight = dimensions?.height ?? window.innerHeight;
+  const configuredWidth = toNumberOrNull(pageNodeData?.width);
+  const configuredHeight = toNumberOrNull(pageNodeData?.height);
+  const containerWidth = pageNodeData?.autoWidth === true
+    ? window.innerWidth
+    : configuredWidth ?? window.innerWidth;
+  const containerHeight = pageNodeData?.autoHeight === true
+    ? window.innerHeight
+    : configuredHeight ?? window.innerHeight;
 
   return (
     <div style={{

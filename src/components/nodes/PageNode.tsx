@@ -132,14 +132,25 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                         <div style={rowStyle}>
                             <label style={rowLabelStyle}>width(px):</label>
                             <div style={controlStackStyle}>
-                                <input
-                                    id="field-width"
-                                    className="nodrag"
-                                    type="number"
-                                    value={data.width ?? ''}
-                                    onChange={onTextChange}
-                                    style={numberInputStyle}
-                                />
+                                <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                                    <input
+                                        id="field-width"
+                                        className="nodrag"
+                                        type="number"
+                                        value={data.width ?? ''}
+                                        onChange={onTextChange}
+                                        style={numberInputStyle}
+                                    />
+                                    <label style={labelStyle}>auto</label>
+                                    <input
+                                        id="field-autoWidth"
+                                        className="nodrag"
+                                        type="checkbox"
+                                        checked={data.autoWidth ?? false}
+                                        onChange={onTextChange}
+                                        style={{width: '14px', height: '14px', cursor: 'pointer', accentColor: '#57212E', opacity: 0.8}}
+                                    />
+                                </div>
                                 <CumulativeCenterSlider
                                     showValuePreview={false}
                                     className="nodrag nopan nowheel"
@@ -152,14 +163,25 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
                         <div style={rowStyle}>
                             <label style={rowLabelStyle}>height(px):</label>
                             <div style={controlStackStyle}>
-                                <input
-                                    id="field-height"
-                                    className="nodrag"
-                                    type="number"
-                                    value={data.height ?? ''}
-                                    onChange={onTextChange}
-                                    style={numberInputStyle}
-                                />
+                                <div style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                                    <input
+                                        id="field-height"
+                                        className="nodrag"
+                                        type="number"
+                                        value={data.height ?? ''}
+                                        onChange={onTextChange}
+                                        style={numberInputStyle}
+                                    />
+                                    <label style={labelStyle}>auto</label>
+                                    <input
+                                        id="field-autoHeight"
+                                        className="nodrag"
+                                        type="checkbox"
+                                        checked={data.autoHeight ?? false}
+                                        onChange={onTextChange}
+                                        style={{width: '14px', height: '14px', cursor: 'pointer', accentColor: '#57212E', opacity: 0.8}}
+                                    />
+                                </div>
                                 <CumulativeCenterSlider
                                     showValuePreview={false}
                                     className="nodrag nopan nowheel"

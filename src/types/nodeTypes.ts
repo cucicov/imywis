@@ -29,6 +29,8 @@ export type PageNodeData = BaseNodeData & {
     name?: string;
     width?: number;
     height?: number;
+    autoWidth?: boolean;
+    autoHeight?: boolean;
     mousePointer?: string;
     popUp?: boolean;
     backgroundColor?: string;
