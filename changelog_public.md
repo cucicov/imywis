@@ -142,3 +142,22 @@ This changelog tracks public releases and delivered changes.
 ### Security
 
 ### Notes
+---
+## [1.3.2] - 2026-08-06
+### Summary
+- Added automatic Page Node dimensions with minimum-size support.
+
+### Added
+- Page Node width and height now each have an `auto` option.
+
+### Changed
+- When an auto dimension is enabled, a page uses the larger of its configured dimension and the browser viewport when it opens. The size remains fixed after opening.
+
+### Fixed
+- Page content is no longer reduced below its configured width or height on smaller screens when auto dimensions are enabled.
+
+### Removed
+
+### Security
+
+### Notes
