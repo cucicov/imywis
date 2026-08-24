@@ -13,6 +13,7 @@ import {ensureProjectFontsLoaded, PROJECT_FONT_OPTIONS} from '../utils/fontRegis
 
 type P5BackgroundProps = {
   nodes: Node[];
+  onAutoTextDimensions?: (nodeId: string, dimensions: {width: number; height: number}) => void;
 };
 
 type ImageMetadataWithImage = Partial<ImageNodeData> & {
@@ -37,7 +38,7 @@ type ProgressiveRenderState = {
   taskIndex: number;
 };
 
-const P5Preview = ({ nodes }: P5BackgroundProps) => {
+const P5Preview = ({ nodes, onAutoTextDimensions }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
   const backgroundMetadataListRef = useRef<BackgroundMetadataWithImage[]>([]);
@@ -67,6 +68,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
   const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
   const [fontsReady, setFontsReady] = useState(PROJECT_FONT_OPTIONS.length === 0);
+  const [isP5Ready, setIsP5Ready] = useState(false);
 
   const selectedPageNode = useMemo(() => {
     const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
@@ -227,6 +229,24 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
       isActive = false;
     };
   }, [requestRedraw]);
+
+  useEffect(() => {
+    const p5Instance = p5InstanceRef.current;
+    if (!p5Instance || !fontsReady || !isP5Ready || !onAutoTextDimensions) {
+      return;
+    }
+
+    nodes.forEach((node) => {
+      if (node.type !== NODE_TYPES.TEXT) {
+        return;
+      }
+      const textData = node.data as TextNodeData;
+      if (textData.autoSize !== true) {
+        return;
+      }
+      onAutoTextDimensions(node.id, measureAutoTextNodeDimensions(p5Instance, textData));
+    });
+  }, [fontsReady, isP5Ready, nodes, onAutoTextDimensions]);
 
   const maybeCompletePreviewLoad = useCallback((token: number) => {
     if (token !== previewLoadTokenRef.current) {
@@ -489,6 +509,7 @@ const P5Preview = ({ nodes }: P5BackgroundProps) => {
     }
 
     p5InstanceRef.current = p5Instance;
+    setIsP5Ready(true);
     if (hasLivePreviewRef.current) {
       p5Instance.frameRate(30);
       p5Instance.loop();
@@ -1286,15 +1307,7 @@ const drawTextWithDecorations = (
   target.push();
   target.textFont(font);
   target.textSize(size);
-  if (bold && italic) {
-    target.textStyle(p5Instance.BOLDITALIC);
-  } else if (bold) {
-    target.textStyle(p5Instance.BOLD);
-  } else if (italic) {
-    target.textStyle(p5Instance.ITALIC);
-  } else {
-    target.textStyle(p5Instance.NORMAL);
-  }
+  applyTextFontVariant(target, p5Instance, font, size, bold, italic);
 
   const alpha = clamp(Math.round(opacity * 255), 0, 255);
   const textColor = p5Instance.color(color);
@@ -1353,6 +1366,52 @@ const drawTextWithDecorations = (
 
   target.pop();
 };
+
+const measureAutoTextNodeDimensions = (target: p5, textData: TextNodeData) => {
+  const rawText = typeof textData.text === 'string' ? textData.text : '';
+  if (!rawText.trim()) {
+    return {width: 0, height: 0};
+  }
+
+  const text = toBoolean(textData.caps) ? rawText.toUpperCase() : rawText;
+  const size = Math.max(1, toNumberOrNull(textData.size) ?? 16);
+  const font = typeof textData.font === 'string' && textData.font.trim() ? textData.font : 'sans-serif';
+  target.push();
+  target.textFont(font);
+  target.textSize(size);
+  applyTextFontVariant(target, target, font, size, toBoolean(textData.bold), toBoolean(textData.italic));
+
+  const unwrappedLines = wrapTextLines(target, text, Number.MAX_SAFE_INTEGER);
+  const width = Math.ceil(Math.max(...unwrappedLines.map(line => target.textWidth(line.text)), 0));
+  const renderedLines = wrapTextLines(target, text, Math.max(1, width));
+  target.pop();
+
+  return {
+    width,
+    height: Math.ceil(renderedLines.length * size * 1.2),
+  };
+};
+
+const applyTextFontVariant = (
+  target: p5 | p5.Graphics,
+  p5Instance: p5,
+  font: string,
+  size: number,
+  bold: boolean,
+  italic: boolean
+) => {
+  target.textStyle(italic ? p5Instance.ITALIC : p5Instance.NORMAL);
+  const drawingContext = (target as unknown as {drawingContext: CanvasRenderingContext2D}).drawingContext;
+  drawingContext.font = `${italic ? 'italic ' : ''}${bold ? '700 ' : '400 '}${size}px ${formatCanvasFontFamily(font)}`;
+};
+
+const formatCanvasFontFamily = (font: string) => font.split(',')
+  .map((family) => family.trim())
+  .filter(Boolean)
+  .map((family) => (/^(serif|sans-serif|monospace|cursive|fantasy|system-ui)$/i.test(family)
+    ? family
+    : `"${family.replace(/"/g, '\\"')}"`))
+  .join(', ');
 
 const wrapTextLines = (target: p5 | p5.Graphics, text: string, maxWidth: number) => {
   const paragraphs = text.split('\n');

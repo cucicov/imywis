@@ -72,6 +72,7 @@ export type TextNodeData = BaseNodeData & {
     size?: number;
     width?: number;
     height?: number;
+    autoSize?: boolean;
     positionX?: number;
     positionY?: number;
     opacity?: number;

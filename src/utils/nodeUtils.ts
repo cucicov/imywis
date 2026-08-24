@@ -18,12 +18,27 @@ export const updateNodeAndPropagate = (
     field: string,
     newValue: unknown
 ): Node[] => {
+    return updateNodeDataAndPropagate(nodes, edges, nodeId, {[field]: newValue});
+};
+
+export const updateNodeDataAndPropagate = (
+    nodes: Node[],
+    edges: Edge[],
+    nodeId: string,
+    updates: Record<string, unknown>
+): Node[] => {
     const nodeMap = new Map(nodes.map(node => [node.id, node]));
     const currentNode = nodeMap.get(nodeId);
 
     if (!currentNode) return nodes;
 
-    const updatedSourceNode = updateCurrentNode(currentNode, field, newValue);
+    const updatedSourceNode = {
+        ...currentNode,
+        data: {
+            ...currentNode.data,
+            ...updates,
+        },
+    };
     nodeMap.set(nodeId, updatedSourceNode);
 
     const edgesBySource = new Map<string, Edge[]>();

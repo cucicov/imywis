@@ -15,7 +15,7 @@ import '@xyflow/react/dist/style.css';
 import PageNode from './nodes/PageNode.tsx';
 import ImageNode from "./nodes/ImageNode.tsx";
 import type {PageNodeData} from "../types/nodeTypes.ts";
-import {syncNodesFromEdges} from "../utils/nodeUtils.ts";
+import {syncNodesFromEdges, updateNodeDataAndPropagate} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
 import {CONNECTION_RULES} from "../types/handleTypes.ts";
 import P5Preview from './P5Preview.tsx';
@@ -113,6 +113,17 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const latestEdgesRef = useRef(edges);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedNodesRef = useRef<Node[]>([]);
+
+  const onAutoTextDimensions = useCallback((nodeId: string, dimensions: {width: number; height: number}) => {
+    setNodes((currentNodes) => {
+      const node = currentNodes.find((item) => item.id === nodeId);
+      if (!node || node.type !== NODE_TYPES.TEXT || node.data.autoSize !== true
+        || (node.data.width === dimensions.width && node.data.height === dimensions.height)) {
+        return currentNodes;
+      }
+      return updateNodeDataAndPropagate(currentNodes, edges, nodeId, dimensions);
+    });
+  }, [edges, setNodes]);
   const [copiedNodes, setCopiedNodes] = useState<Node[]>([]);
   const [copiedEdges, setCopiedEdges] = useState<Edge[]>([]);
 
@@ -703,7 +714,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           fitView
           style={{ width: '100%', height: '100%' }}
         >
-          {previewEnabled ? <P5Preview nodes={nodes} /> : null}
+          {previewEnabled ? <P5Preview nodes={nodes} onAutoTextDimensions={onAutoTextDimensions} /> : null}
           <AddNodesDropdown isOpen={openDropdown === 'add'} />
           <Background bgColor={pageBackgroundColor} />
         </ReactFlow>

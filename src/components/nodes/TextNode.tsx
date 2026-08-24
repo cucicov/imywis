@@ -1,6 +1,6 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, useState, type ChangeEvent, type CSSProperties} from 'react';
-import {updateNodeAndPropagate} from '../../utils/nodeUtils.ts';
+import {updateNodeAndPropagate, updateNodeDataAndPropagate} from '../../utils/nodeUtils.ts';
 import {NODE_TYPES, type TextNodeData} from '../../types/nodeTypes';
 import {HandleTypes} from '../../types/handleTypes';
 import {APP_CONFIG} from '../../config/appConfig.ts';
@@ -49,8 +49,8 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const fieldsExpanded = data.collapsed !== true;
     const sizeNumericValue = toFiniteNumber(data.size, 16);
-    const widthNumericValue = toFiniteNumber(data.width, 250);
-    const heightNumericValue = toFiniteNumber(data.height, 120);
+    const widthNumericValue = toFiniteNumber(data.width, 0);
+    const heightNumericValue = toFiniteNumber(data.height, 0);
     const positionXNumericValue = toFiniteNumber(data.positionX, 0);
     const positionYNumericValue = toFiniteNumber(data.positionY, 0);
 
@@ -61,13 +61,32 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
             ? evt.target.checked
             : value;
 
+        if (field === 'width' || field === 'height') {
+            const edges = getEdges();
+            setNodes((nds) => updateNodeDataAndPropagate(nds, edges, id, {
+                [field]: newValue,
+                autoSize: false,
+            }));
+            return;
+        }
+
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
     }, [getEdges, id, setNodes]);
 
     const onNumericSliderChange = useCallback((field: string, nextValue: number) => {
+        const newValue = Math.round(nextValue);
+        if (field === 'width' || field === 'height') {
+            const edges = getEdges();
+            setNodes((nds) => updateNodeDataAndPropagate(nds, edges, id, {
+                [field]: newValue,
+                autoSize: false,
+            }));
+            return;
+        }
+
         const edges = getEdges();
-        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
+        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
     }, [getEdges, id, setNodes]);
 
     const onBackgroundColorChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
@@ -322,6 +341,13 @@ const TextNode = ({id, data}: NodeProps<Node<TextNodeData, typeof NODE_TYPES.TEX
                         />
                     </div>
                 </div>
+
+                {data.autoSize === true && (
+                    <div style={{...rowStyle, marginTop: '2px'}}>
+                        <span style={rowLabelStyle}>sizing:</span>
+                        <span style={{...labelStyle, lineHeight: '18px'}}>auto-fit to text</span>
+                    </div>
+                )}
 
                 <div style={rowStyle}>
                     <label htmlFor="field-width" style={rowLabelStyle}>width(px):</label>
