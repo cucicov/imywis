@@ -6,6 +6,7 @@ import {
   type Connection,
   type Edge,
   type Node,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import {type AppUIProps} from '../types/supabaseTypes.ts';
 
@@ -113,6 +114,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const latestEdgesRef = useRef(edges);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const selectedNodesRef = useRef<Node[]>([]);
+  const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
 
   const onAutoTextDimensions = useCallback((nodeId: string, dimensions: {width: number; height: number}) => {
     setNodes((currentNodes) => {
@@ -479,6 +481,23 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   const handlePaste = useCallback(() => {
     if (copiedNodes.length === 0) return;
 
+    const reactFlowInstance = reactFlowInstanceRef.current;
+    const flowScrollContainer = document.getElementById('imywis-flow-scroll-container');
+    if (!reactFlowInstance || !flowScrollContainer) {
+      return;
+    }
+
+    const scrollContainerBounds = flowScrollContainer.getBoundingClientRect();
+    const viewportCenter = reactFlowInstance.screenToFlowPosition({
+      x: scrollContainerBounds.left + (flowScrollContainer.clientWidth / 2),
+      y: scrollContainerBounds.top + (flowScrollContainer.clientHeight / 2),
+    });
+    const copiedGroupBounds = getNodeGroupBounds(copiedNodes);
+    const positionOffset = {
+      x: viewportCenter.x - ((copiedGroupBounds.minX + copiedGroupBounds.maxX) / 2),
+      y: viewportCenter.y - ((copiedGroupBounds.minY + copiedGroupBounds.maxY) / 2),
+    };
+
     // Generate new IDs for pasted nodes
     const maxId = nodes.length > 0 ? Math.max(...nodes.map(n => Number(n.id) || 0)) : 0;
     const idMap = new Map<string, string>();
@@ -488,15 +507,15 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       idMap.set(node.id, newId);
     });
 
-    // Clone nodes with new IDs and offset position
+    // Clone nodes with new IDs while centering the copied group in the current viewport.
     const newNodes: Node[] = copiedNodes.map(node => {
       const newId = idMap.get(node.id)!;
       return {
         ...node,
         id: newId,
         position: {
-          x: node.position.x + 50,
-          y: node.position.y + 50,
+          x: node.position.x + positionOffset.x,
+          y: node.position.y + positionOffset.y,
         },
         data: {
           ...node.data,
@@ -708,6 +727,9 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           onSelectionChange={onSelectionChange}
           onNodeClick={onNodeClick}
           onConnect={onConnect}
+          onInit={(instance) => {
+            reactFlowInstanceRef.current = instance;
+          }}
           nodeTypes={nodeTypes}
           isValidConnection={isValidConnection}
           deleteKeyCode={['Backspace', 'Delete']}
@@ -952,5 +974,21 @@ const hydrateNodesWithLocalImageCache = async (nodes: Node[]): Promise<Node[]> =
 
   return hydratedNodes;
 };
+
+const getNodeGroupBounds = (nodes: Node[]) => nodes.reduce((bounds, node) => {
+  const width = node.measured?.width ?? node.width ?? 0;
+  const height = node.measured?.height ?? node.height ?? 0;
+  return {
+    minX: Math.min(bounds.minX, node.position.x),
+    minY: Math.min(bounds.minY, node.position.y),
+    maxX: Math.max(bounds.maxX, node.position.x + width),
+    maxY: Math.max(bounds.maxY, node.position.y + height),
+  };
+}, {
+  minX: Number.POSITIVE_INFINITY,
+  minY: Number.POSITIVE_INFINITY,
+  maxX: Number.NEGATIVE_INFINITY,
+  maxY: Number.NEGATIVE_INFINITY,
+});
 
 export default FlowCanvas;
