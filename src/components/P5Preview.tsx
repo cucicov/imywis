@@ -1414,35 +1414,50 @@ const formatCanvasFontFamily = (font: string) => font.split(',')
   .join(', ');
 
 const wrapTextLines = (target: p5 | p5.Graphics, text: string, maxWidth: number) => {
-  const paragraphs = text.split('\n');
-  const lines: Array<{text: string; isLastInParagraph: boolean}> = [];
+  const lines: Array<{text: string}> = [];
 
-  paragraphs.forEach(paragraph => {
-    if (!paragraph.trim()) {
-      lines.push({text: '', isLastInParagraph: true});
+  text.split('\n').forEach((paragraph) => {
+    if (paragraph.length === 0) {
+      lines.push({text: ''});
       return;
     }
 
-    const words = paragraph.split(/\s+/);
     let currentLine = '';
+    Array.from(paragraph).forEach((character) => {
+      let pendingCharacter = character;
+      while (pendingCharacter) {
+        const candidate = currentLine + pendingCharacter;
+        if (currentLine.length === 0 || target.textWidth(candidate) <= maxWidth) {
+          currentLine = candidate;
+          pendingCharacter = '';
+          continue;
+        }
 
-    words.forEach(word => {
-      const candidate = currentLine ? `${currentLine} ${word}` : word;
-      if (target.textWidth(candidate) <= maxWidth || !currentLine) {
-        currentLine = candidate;
-        return;
+        const breakIndex = findLastWhitespaceIndex(currentLine);
+        if (breakIndex >= 0) {
+          lines.push({text: currentLine.slice(0, breakIndex + 1)});
+          currentLine = currentLine.slice(breakIndex + 1);
+          continue;
+        }
+
+        lines.push({text: currentLine});
+        currentLine = '';
       }
-
-      lines.push({text: currentLine, isLastInParagraph: false});
-      currentLine = word;
     });
 
-    if (currentLine) {
-      lines.push({text: currentLine, isLastInParagraph: true});
-    }
+    lines.push({text: currentLine});
   });
 
   return lines;
+};
+
+const findLastWhitespaceIndex = (text: string) => {
+  for (let index = text.length - 1; index >= 0; index -= 1) {
+    if (/\s/.test(text[index])) {
+      return index;
+    }
+  }
+  return -1;
 };
 
 const resolveTextAlign = (value: unknown): 'left' | 'right' | 'center' => {
