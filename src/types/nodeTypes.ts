@@ -43,6 +43,7 @@ export type ImageNodeData = BaseNodeData & {
     localImageFileName?: string;
     width?: number;
     height?: number;
+    scale?: number;
     autoWidth?: boolean;
     autoHeight?: boolean;
     positionX?: number;

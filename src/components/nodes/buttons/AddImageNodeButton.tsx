@@ -11,6 +11,7 @@ const AddPageNodeButton = () => {
             path: '',
             width: 100,
             height: 100,
+            scale: 1,
             autoWidth: false,
             autoHeight: false,
             positionX: 0,

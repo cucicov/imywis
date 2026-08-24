@@ -1,6 +1,6 @@
 import {Handle, Position, useReactFlow, type Node, type NodeProps} from '@xyflow/react';
 import {useCallback, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent} from 'react';
-import {updateNodeAndPropagate} from "../../utils/nodeUtils.ts";
+import {updateNodeAndPropagate, updateNodeDataAndPropagate} from "../../utils/nodeUtils.ts";
 import {NODE_TYPES, type ImageNodeData} from '../../types/nodeTypes';
 import { HandleTypes } from '../../types/handleTypes';
 import {APP_CONFIG} from '../../config/appConfig.ts';
@@ -65,12 +65,14 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
     const [dropErrorMessage, setDropErrorMessage] = useState<string | null>(null);
     const [isDragTargetActive, setIsDragTargetActive] = useState(false);
     const dragDepthRef = useRef(0);
+    const previewImageRef = useRef<HTMLImageElement | null>(null);
     const previewPath = data.localImageDataUrl
         ?? (typeof data.path === 'string' && !data.path.startsWith('local:') ? data.path : '')
         ?? '';
     const hasPreviewError = previewErrorPath === previewPath;
     const widthNumericValue = toFiniteNumber(data.width, 100);
     const heightNumericValue = toFiniteNumber(data.height, 100);
+    const scaleNumericValue = toFiniteNumber(data.scale, 1);
     const positionXNumericValue = toFiniteNumber(data.positionX, 0);
     const positionYNumericValue = toFiniteNumber(data.positionY, 0);
 
@@ -81,6 +83,40 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
             nds
         ));
     }, [getEdges, id, setNodes]);
+
+    const applyAutoImageDimensions = useCallback((naturalWidth: number, naturalHeight: number) => {
+        if (naturalWidth <= 0 || naturalHeight <= 0) {
+            return;
+        }
+
+        const updates: Array<{field: string; value: unknown}> = [];
+        if (data.autoWidth === true) {
+            updates.push({field: 'width', value: naturalWidth});
+        }
+        if (data.autoHeight === true) {
+            updates.push({field: 'height', value: naturalHeight});
+        }
+        if (updates.length > 0) {
+            applyNodeFieldUpdates(updates);
+        }
+    }, [applyNodeFieldUpdates, data.autoHeight, data.autoWidth]);
+
+    const onScaleChange = useCallback((nextValue: number) => {
+        const nextScale = Math.min(100, Math.max(0, nextValue));
+        const currentScale = Math.min(100, Math.max(0, toFiniteNumber(data.scale, 1)));
+        const scaleRatio = currentScale > 0 ? nextScale / currentScale : 0;
+        const currentWidth = toFiniteNumber(data.width, 100);
+        const currentHeight = toFiniteNumber(data.height, 100);
+        const edges = getEdges();
+
+        setNodes((nds) => updateNodeDataAndPropagate(nds, edges, id, {
+            scale: nextScale,
+            width: Math.round(currentWidth * scaleRatio),
+            height: Math.round(currentHeight * scaleRatio),
+            autoWidth: false,
+            autoHeight: false,
+        }));
+    }, [data.height, data.scale, data.width, getEdges, id, setNodes]);
 
     const onTextChange = useCallback((evt: ChangeEvent<HTMLInputElement>) => {
         const { id: targetId, value, type, checked } = evt.target;
@@ -98,8 +134,28 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
             return;
         }
 
+        if (field === 'scale') {
+            const parsedScale = Number(newValue);
+            if (Number.isFinite(parsedScale)) {
+                onScaleChange(parsedScale);
+            }
+            return;
+        }
+
+        if ((field === 'autoWidth' || field === 'autoHeight') && newValue === true) {
+            applyNodeFieldUpdates([{field, value: true}]);
+            const previewImage = previewImageRef.current;
+            if (previewImage?.naturalWidth && previewImage.naturalHeight) {
+                applyNodeFieldUpdates([{
+                    field: field === 'autoWidth' ? 'width' : 'height',
+                    value: field === 'autoWidth' ? previewImage.naturalWidth : previewImage.naturalHeight,
+                }]);
+            }
+            return;
+        }
+
         applyNodeFieldUpdates([{field, value: newValue}]);
-    }, [applyNodeFieldUpdates]);
+    }, [applyNodeFieldUpdates, onScaleChange]);
 
     const hasImageFileInDragPayload = useCallback((evt: DragEvent<HTMLElement>) => {
         const items = evt.dataTransfer?.items;
@@ -213,9 +269,13 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
     }, [handlePathDropPayload]);
 
     const onNumericSliderChange = useCallback((field: string, nextValue: number) => {
+        if (field === 'scale') {
+            onScaleChange(nextValue);
+            return;
+        }
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
-    }, [getEdges, id, setNodes]);
+    }, [getEdges, id, onScaleChange, setNodes]);
 
     const onToggleFields = useCallback(() => {
         setNodes((nds) => nds.map((node) => (
@@ -342,11 +402,16 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                     border: '1px solid rgba(0,0,0,0.1)'
                 }}>
                     <img
+                        ref={previewImageRef}
                         src={previewPath.startsWith('http')
                             ? `https://corsproxy.io/?key=80b6bad2&url=${encodeURIComponent(previewPath)}`
                             : previewPath}
                         alt={`${data.label ?? 'Image'} preview`}
                         onError={() => setPreviewErrorPath(previewPath)}
+                        onLoad={(event) => applyAutoImageDimensions(
+                            event.currentTarget.naturalWidth,
+                            event.currentTarget.naturalHeight
+                        )}
                         style={{
                             display: 'block',
                             width: '80px',
@@ -462,6 +527,33 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                                     cumulativeValue={heightNumericValue}
                                     minCumulativeValue={0}
                                     onCumulativeChange={(nextValue) => onNumericSliderChange('height', nextValue)}
+                                />
+                            </div>
+                        </div>
+                        <div style={rowStyle}>
+                            <label style={rowLabelStyle}>scale:</label>
+                            <div style={controlStackStyle}>
+                                <input
+                                    id="field-scale"
+                                    className="nodrag"
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    step="0.1"
+                                    value={data.scale ?? 1}
+                                    onChange={onTextChange}
+                                    style={numberInputStyle}
+                                />
+                                <CumulativeCenterSlider
+                                    showValuePreview={false}
+                                    className="nodrag nopan nowheel"
+                                    cumulativeValue={scaleNumericValue}
+                                    min={0}
+                                    max={100}
+                                    step={0.1}
+                                    minCumulativeValue={0}
+                                    onCumulativeChange={(nextValue) => onNumericSliderChange('scale', nextValue)}
+                                    ariaLabel="Image scale"
                                 />
                             </div>
                         </div>
