@@ -9,6 +9,29 @@ This changelog tracks public releases and delivered changes.
 - `PATCH`: backward-compatible fixes
 
 ---
+## [1.4.0] - 2026-08-24
+### Summary
+- Image scaling, improved copy-paste positioning, ASCII art support, and dynamic textbox sizing.
+
+### Added
+- Image Node scale attribute for proportional image resizing. A scale of `1` represents the unscaled image.
+- Text Node support for preserving leading and trailing spaces in ASCII art.
+- Dynamic sizing for text boxes.
+
+### Changed
+- Pasted nodes are now placed in the middle of the viewport.
+
+### Fixed
+- Copy-paste positioning issue.
+- Text Node handling of leading and trailing spaces.
+
+### Removed
+
+### Security
+
+### Notes
+
+---
 ## [1.1.0] - 2026-04-19
 ### Summary
 - Added signin/signup functionality.
