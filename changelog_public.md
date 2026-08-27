@@ -9,6 +9,25 @@ This changelog tracks public releases and delivered changes.
 - `PATCH`: backward-compatible fixes
 
 ---
+## [1.4.1] - 2026-08-27
+### Summary
+- EventNode can open multiple PageNodes: one primary redirect plus multiple pop-up pages.
+
+### Added
+- Multi-target navigation for click events: if an EventNode links to multiple PageNodes, exactly one can be a non-popup target (redirect), and any number can be pop-up targets (opened together).
+
+### Changed
+- Publishing and editor validation now enforce: max 1 PageNode with `popUp: false` per EventNode.
+
+### Fixed
+
+### Removed
+
+### Security
+
+### Notes
+
+---
 ## [1.4.0] - 2026-08-24
 ### Summary
 - Image scaling, improved copy-paste positioning, ASCII art support, and dynamic textbox sizing.

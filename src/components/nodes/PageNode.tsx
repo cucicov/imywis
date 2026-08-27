@@ -14,7 +14,7 @@ const textInputStyle = { fontSize: '11px', width: '100px', border: 0, background
 const numberInputStyle = { fontSize: '11px', width: '90px', border: 0, background: '#fff', opacity: 0.7, color: 'black' } as const;
 
 const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.PAGE>>) => {
-    const { setNodes, getEdges } = useReactFlow();
+    const { setNodes, getEdges, getNodes } = useReactFlow();
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const fieldsExpanded = data.collapsed !== true;
     const isFirstPage = id === '1';
@@ -27,8 +27,29 @@ const PageNode = ({ id, data }: NodeProps<Node<PageNodeData, typeof NODE_TYPES.P
         const field = targetId.replace('field-', '');
 
         const edges = getEdges();
+        if (field === 'popUp' && newValue === false) {
+            const hasAnotherPrimary = edges.some(edge => {
+                if (edge.targetHandle !== 'red-input' || edge.sourceHandle !== 'red-output' || edge.source === id) {
+                    return false;
+                }
+                const eventNode = getNodes().find(node => node.id === edge.target && node.type === NODE_TYPES.EVENT);
+                if (!eventNode) return false;
+                const otherPrimary = edges.some(candidate => {
+                    if (candidate.target !== eventNode.id || candidate.targetHandle !== 'red-input' || candidate.source === id) {
+                        return false;
+                    }
+                    const source = getNodes().find(node => node.id === candidate.source && node.type === NODE_TYPES.PAGE);
+                    return (source?.data as PageNodeData | undefined)?.popUp !== true;
+                });
+                return otherPrimary;
+            });
+            if (hasAnotherPrimary) {
+                window.alert('This PageNode cannot be non-popup because its EventNode already has a non-popup PageNode.');
+                return;
+            }
+        }
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, newValue));
-    }, [getEdges, id, setNodes]);
+    }, [getEdges, getNodes, id, setNodes]);
 
     const onSliderCumulativeChange = useCallback((nextValue: number) => {
         const edges = getEdges();

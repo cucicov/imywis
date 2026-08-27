@@ -5,6 +5,7 @@ import {APP_CONFIG} from '../config/appConfig';
 import type {Session} from "@supabase/supabase-js";
 import {supabase} from "../utils/supabaseClient.ts";
 import {saveProjectDataToUserProfile} from '../utils/userProfileProject.ts';
+import {getEventPageTargetViolation} from '../utils/nodeUtils.ts';
 
 type ExportP5ProjectProps = {
     nodes: Node[];
@@ -160,6 +161,12 @@ const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5Proje
             setStatusType(null);
 
             const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
+            const invalidEventId = getEventPageTargetViolation(nodes, edges);
+            if (invalidEventId) {
+                setStatusMessage(`Publish blocked: EventNode ${invalidEventId} has more than one non-popup PageNode.`);
+                setStatusType('error');
+                return;
+            }
             const oversizedLocalImages = getOversizedLocalImages(nodes, MAX_LOCAL_IMAGE_BYTES);
             if (oversizedLocalImages.length > 0) {
                 const names = oversizedLocalImages.slice(0, 3).map(item => item.fileName).join(', ');

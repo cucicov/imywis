@@ -233,9 +233,27 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           return;
         }
 
+        if (normalizedConnection.sourceHandle === 'red-output'
+          && normalizedConnection.targetHandle === 'red-input') {
+          const candidateSource = nodes.find(node => node.id === sourceId);
+          const candidateTarget = nodes.find(node => node.id === targetId);
+          if (candidateSource?.type === NODE_TYPES.PAGE && candidateTarget?.type === NODE_TYPES.EVENT) {
+            const candidateData = candidateSource.data as {popUp?: boolean};
+            if (candidateData.popUp !== true) {
+              const existingPrimary = edges.some(edge => {
+                if (edge.target !== targetId || edge.targetHandle !== 'red-input') return false;
+                const page = nodes.find(node => node.id === edge.source);
+                return page?.type === NODE_TYPES.PAGE
+                  && (page.data as {popUp?: boolean}).popUp !== true;
+              });
+              if (existingPrimary) return;
+            }
+          }
+        }
+
         setEdges((eds) => addEdge(normalizedConnection, eds));
       },
-      [setEdges]
+      [edges, nodes, setEdges]
   );
 
   // Update target nodes when connections change
@@ -387,6 +405,20 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
 
     if (hasConnectionBetweenNodes) {
       return false;
+    }
+
+    if (normalizedConnection.sourceHandle === 'red-output'
+      && normalizedConnection.targetHandle === 'red-input'
+      && nodes.find(node => node.id === normalizedConnection.source)?.type === NODE_TYPES.PAGE
+      && targetNode?.type === NODE_TYPES.EVENT) {
+      const pageData = nodes.find(node => node.id === normalizedConnection.source)?.data as {popUp?: boolean} | undefined;
+      if (pageData?.popUp !== true && edges.some(edge => {
+        if (edge.target !== normalizedConnection.target || edge.targetHandle !== 'red-input') return false;
+        const page = nodes.find(node => node.id === edge.source);
+        return page?.type === NODE_TYPES.PAGE && (page.data as {popUp?: boolean}).popUp !== true;
+      })) {
+        return false;
+      }
     }
 
     const isTextNodeInput = String(targetNode?.type) === NODE_TYPES.TEXT

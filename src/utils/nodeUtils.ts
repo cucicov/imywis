@@ -259,3 +259,32 @@ export const removeSourceNodeMetadata = (
         },
     };
 };
+
+/** Returns the EventNode id when a connection is a PageNode -> EventNode link. */
+export const getPageEventTarget = (nodes: Node[], edge: Edge): string | null => {
+    const source = nodes.find(node => node.id === edge.source);
+    const target = nodes.find(node => node.id === edge.target);
+    if (source?.type !== NODE_TYPES.PAGE || target?.type !== NODE_TYPES.EVENT) {
+        return null;
+    }
+    if (edge.sourceHandle !== 'red-output' || edge.targetHandle !== 'red-input') {
+        return null;
+    }
+    return target.id;
+};
+
+export const getEventPageTargetViolation = (nodes: Node[], edges: Edge[]): string | null => {
+    const nonPopupCounts = new Map<string, number>();
+    edges.forEach(edge => {
+        const eventId = getPageEventTarget(nodes, edge);
+        if (!eventId) return;
+        const page = nodes.find(node => node.id === edge.source);
+        const pageData = page?.data as {popUp?: boolean} | undefined;
+        if (pageData?.popUp !== true) {
+            nonPopupCounts.set(eventId, (nonPopupCounts.get(eventId) ?? 0) + 1);
+        }
+    });
+
+    const invalidEvent = Array.from(nonPopupCounts.entries()).find(([, count]) => count > 1);
+    return invalidEvent ? invalidEvent[0] : null;
+};
