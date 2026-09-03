@@ -36,6 +36,7 @@ import {supabase} from '../utils/supabaseClient.ts';
 import {getLocalImageDataUrl} from '../utils/localImageCache.ts';
 import ChangeLogPopUp from './ChangeLogPopUp.tsx';
 import AddNodesDropdown from './AddNodesDropdown.tsx';
+import StatusPopup, {type StatusPopupType} from './StatusPopup.tsx';
 
 const nodeTypes = {
   pageNode: PageNode,
@@ -70,6 +71,7 @@ type PersistedNode = {
 
 type UserProfileProjectRow = {
   data?: unknown;
+  handle?: string | null;
 };
 
 type PersistedProjectData = {
@@ -111,6 +113,10 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
   }));
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [autosaveEnabled, setAutosaveEnabled] = useState(false);
+  const [userHandle, setUserHandle] = useState('');
+  const [isHandleLoading, setIsHandleLoading] = useState(true);
+  const [isHandleUpdating, setIsHandleUpdating] = useState(false);
+  const [handleStatus, setHandleStatus] = useState<{type: StatusPopupType; message: string} | null>(null);
   const latestNodesRef = useRef(nodes);
   const latestEdgesRef = useRef(edges);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -166,7 +172,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     const loadNodesFromProfile = async () => {
       const {data, error} = await supabase
         .from('user_profiles')
-        .select('data')
+        .select('data, handle')
         .eq('user_id', session.user.id)
         .maybeSingle<UserProfileProjectRow>();
 
@@ -176,8 +182,13 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
 
       if (error) {
         console.error('Failed to load saved project from public.user_profiles:', error);
+        setIsHandleLoading(false);
+        setHandleStatus({type: 'error', message: 'Failed to load the user handle. Try again.'});
         return;
       }
+
+      setUserHandle(typeof data?.handle === 'string' ? data.handle : '');
+      setIsHandleLoading(false);
 
       const persistedProjectData = normalizePersistedProjectData(data?.data);
 
@@ -196,6 +207,68 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       isActive = false;
     };
   }, [session.user.id, setEdges, setNodes]);
+
+  const updateUserHandle = useCallback(async () => {
+    const normalizedHandle = userHandle.trim();
+    if (!normalizedHandle) {
+      setHandleStatus({type: 'error', message: 'User handle cannot be empty.'});
+      return;
+    }
+
+    setIsHandleUpdating(true);
+    setHandleStatus(null);
+
+    try {
+      const {data: existingProfiles, error: uniquenessError} = await supabase
+        .from('user_profiles')
+        .select('user_id')
+        .eq('handle', normalizedHandle)
+        .neq('user_id', session.user.id)
+        .limit(1);
+
+      if (uniquenessError) {
+        throw uniquenessError;
+      }
+
+      if (existingProfiles && existingProfiles.length > 0) {
+        setHandleStatus({
+          type: 'error',
+          message: 'User handle already used by another user. Try a different name',
+        });
+        return;
+      }
+
+      const {data: updatedProfile, error: updateError} = await supabase
+        .from('user_profiles')
+        .update({handle: normalizedHandle})
+        .eq('user_id', session.user.id)
+        .select('handle')
+        .maybeSingle<{handle?: string | null}>();
+
+      if (updateError) {
+        if (updateError.code === '23505') {
+          setHandleStatus({
+            type: 'error',
+            message: 'User handle already used by another user. Try a different name',
+          });
+          return;
+        }
+        throw updateError;
+      }
+
+      if (!updatedProfile) {
+        throw new Error('The user profile could not be updated.');
+      }
+
+      setUserHandle(updatedProfile.handle ?? normalizedHandle);
+      setHandleStatus({type: 'success', message: 'User handle has been changed.'});
+    } catch (error) {
+      console.error('Failed to update user handle:', error);
+      setHandleStatus({type: 'error', message: 'Failed to update the user handle. Try again.'});
+    } finally {
+      setIsHandleUpdating(false);
+    }
+  }, [session.user.id, userHandle]);
 
   const persistSelectedPageNode = useCallback((node: Node) => {
     if (node.type !== NODE_TYPES.PAGE) {
@@ -677,6 +750,42 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
                     />
                     Autosave
                   </label>
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '4px'}}>
+                    <label htmlFor="user-handle-input" style={{fontSize: '11px', color: 'white'}}>
+                      User handle
+                    </label>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                      <input
+                        id="user-handle-input"
+                        type="text"
+                        value={userHandle}
+                        onChange={(event) => setUserHandle(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' && !isHandleLoading && !isHandleUpdating) {
+                            void updateUserHandle();
+                          }
+                        }}
+                        disabled={isHandleLoading || isHandleUpdating}
+                        style={{fontSize: '11px', width: '120px', padding: '4px 6px'}}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void updateUserHandle()}
+                        disabled={isHandleLoading || isHandleUpdating}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                          border: '1px solid #ccc',
+                          borderRadius: '4px',
+                          background: 'rgb(26, 25, 43)',
+                          cursor: isHandleLoading || isHandleUpdating ? 'wait' : 'pointer',
+                          opacity: isHandleLoading || isHandleUpdating ? 0.6 : 1,
+                        }}
+                      >
+                        {isHandleUpdating ? 'Updating...' : 'Update'}
+                      </button>
+                    </div>
+                  </div>
                   {lastSavedAt && (
                     <div style={{fontSize: '9px', color: '#666', marginTop: '4px'}}>
                       Last saved: {lastSavedAt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit'})}
@@ -731,6 +840,14 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           </button>
         </div>
       </div>
+      {handleStatus && (
+        <StatusPopup
+          type={handleStatus.type}
+          title="Handle Update"
+          message={handleStatus.message}
+          onClose={() => setHandleStatus(null)}
+        />
+      )}
       <input
         ref={fileInputRef}
         type="file"

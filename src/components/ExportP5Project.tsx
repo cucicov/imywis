@@ -6,6 +6,7 @@ import type {Session} from "@supabase/supabase-js";
 import {supabase} from "../utils/supabaseClient.ts";
 import {saveProjectDataToUserProfile} from '../utils/userProfileProject.ts';
 import {getEventPageTargetViolation} from '../utils/nodeUtils.ts';
+import StatusPopup from './StatusPopup.tsx';
 
 type ExportP5ProjectProps = {
     nodes: Node[];
@@ -56,57 +57,6 @@ const statusWrapperStyle: CSSProperties = {
     textAlign: 'left',
     boxShadow: '0 10px 24px rgba(0, 0, 0, 0.28)',
     backdropFilter: 'blur(4px)',
-};
-
-const closeButtonStyle: CSSProperties = {
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    background: 'rgba(255, 255, 255, 0.08)',
-    color: '#f5f7fa',
-    cursor: 'pointer',
-    fontSize: '16px',
-    lineHeight: 1,
-    width: '22px',
-    height: '22px',
-    borderRadius: '999px',
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-};
-
-const statusHeaderStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '8px',
-    padding: '10px 12px 8px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
-};
-
-const statusBodyStyle: CSSProperties = {
-    padding: '10px 12px 12px',
-    lineHeight: 1.4,
-    wordBreak: 'break-word',
-};
-
-const statusTitleStyle: CSSProperties = {
-    margin: 0,
-    fontSize: '12px',
-    fontWeight: 700,
-    letterSpacing: '0.02em',
-};
-
-const statusChipStyle: CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minWidth: '44px',
-    padding: '2px 8px',
-    borderRadius: '999px',
-    fontSize: '10px',
-    fontWeight: 700,
-    letterSpacing: '0.03em',
-    color: '#fff',
 };
 
 const MAX_LOCAL_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -262,39 +212,15 @@ const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5Proje
             )}
 
             {!isLoading && statusMessage && (
-                <div
-                    style={{
-                        ...statusWrapperStyle,
-                        borderColor: statusType === 'success' ? 'rgba(46, 204, 113, 0.5)' : 'rgba(255, 107, 107, 0.5)',
+                <StatusPopup
+                    type={statusType ?? 'error'}
+                    title="Publish Result"
+                    message={statusMessage}
+                    onClose={() => {
+                        setStatusMessage(null);
+                        setStatusType(null);
                     }}
-                    role="status"
-                >
-                    <div style={statusHeaderStyle}>
-                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                            <span
-                                style={{
-                                    ...statusChipStyle,
-                                    background: statusType === 'success' ? '#1e8e5a' : '#c23b3b',
-                                }}
-                            >
-                                {statusType === 'success' ? 'OK' : 'NOK'}
-                            </span>
-                            <p style={statusTitleStyle}>Publish Result</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setStatusMessage(null);
-                                setStatusType(null);
-                            }}
-                            style={closeButtonStyle}
-                            aria-label="Close status message"
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <div style={statusBodyStyle}>{statusMessage}</div>
-                </div>
+                />
             )}
         </>
     );
