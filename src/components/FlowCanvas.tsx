@@ -28,6 +28,7 @@ import EventNode from './nodes/EventNode.tsx';
 import ExternalLinkNode from './nodes/ExternalLinkNode.tsx';
 import MaskNode from './nodes/MaskNode.tsx';
 import {
+  DEFAULT_LATEST_SELECTED_PAGE_NAME,
   getLatestSelectedPageNameFromSession,
   setLatestSelectedPageNameInSession,
 } from '../utils/sessionStorage.ts';
@@ -356,12 +357,15 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     return () => window.removeEventListener('resize', updateViewportSize);
   }, []);
 
-  const sceneSize = useMemo(() => {
-    const pageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
-    const pageData = pageNode?.data as PageNodeData | undefined;
+  const selectedPageNode = useMemo(
+    () => resolveSelectedPageNode(nodes, latestSelectedPageName),
+    [latestSelectedPageName, nodes]
+  );
+  const selectedPageData = selectedPageNode?.data as PageNodeData | undefined;
 
-    const configuredWidth = toNumberOrNull(pageData?.width);
-    const configuredHeight = toNumberOrNull(pageData?.height);
+  const sceneSize = useMemo(() => {
+    const configuredWidth = toNumberOrNull(selectedPageData?.width);
+    const configuredHeight = toNumberOrNull(selectedPageData?.height);
 
     const canvasWidth = Math.max(1, configuredWidth ?? viewportSize.width);
     const canvasHeight = Math.max(1, configuredHeight ?? viewportSize.height);
@@ -370,13 +374,11 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       width: Math.max(canvasWidth, viewportSize.width),
       height: Math.max(canvasHeight, viewportSize.height),
     };
-  }, [nodes, viewportSize.height, viewportSize.width]);
+  }, [selectedPageData?.height, selectedPageData?.width, viewportSize.height, viewportSize.width]);
 
   const pageBackgroundColor = useMemo(() => {
-    const pageNode = nodes.find(node => node.type === NODE_TYPES.PAGE);
-    const pageData = pageNode?.data as PageNodeData | undefined;
-    return resolvePageBackgroundColor(pageData?.backgroundColor);
-  }, [nodes]);
+    return resolvePageBackgroundColor(selectedPageData?.backgroundColor);
+  }, [selectedPageData?.backgroundColor]);
 
   // validate node connections based on the node input type
   const isValidConnection = useCallback((connection: Edge | Connection) => {
@@ -739,7 +741,17 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       <div
         id="imywis-flow-scroll-container"
         className={animationsEnabled ? undefined : 'imywis-animations-disabled'}
-        style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'auto', paddingTop: '40px' }}
+        style={{
+          position: 'fixed',
+          top: '40px',
+          right: 0,
+          bottom: 0,
+          left: 0,
+          overflowX: 'scroll',
+          overflowY: 'scroll',
+          overscrollBehavior: 'contain',
+          scrollbarGutter: 'stable',
+        }}
       >
         <div
           style={{
@@ -751,6 +763,13 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           }}
         >
         <ChangeLogPopUp />
+        {previewEnabled ? (
+          <P5Preview
+            nodes={nodes}
+            selectedPageNode={selectedPageNode}
+            onAutoTextDimensions={onAutoTextDimensions}
+          />
+        ) : null}
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -768,14 +787,34 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
           fitView
           style={{ width: '100%', height: '100%' }}
         >
-          {previewEnabled ? <P5Preview nodes={nodes} onAutoTextDimensions={onAutoTextDimensions} /> : null}
           <AddNodesDropdown isOpen={openDropdown === 'add'} />
-          <Background bgColor={pageBackgroundColor} />
+          <Background bgColor={previewEnabled ? 'transparent' : pageBackgroundColor} />
         </ReactFlow>
       </div>
     </div>
     </>
   );
+};
+
+const resolveSelectedPageNode = (nodes: Node[], selectedPageName: string) => {
+  const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
+  if (pageNodes.length === 0) {
+    return undefined;
+  }
+
+  const normalizedSelectedPageName = selectedPageName.trim();
+  if (normalizedSelectedPageName && normalizedSelectedPageName !== DEFAULT_LATEST_SELECTED_PAGE_NAME) {
+    const matchingPageNode = pageNodes.find((node) => {
+      const pageData = node.data as PageNodeData | undefined;
+      return (pageData?.name ?? '').trim() === normalizedSelectedPageName;
+    });
+
+    if (matchingPageNode) {
+      return matchingPageNode;
+    }
+  }
+
+  return pageNodes[0];
 };
 
 const resolvePageBackgroundColor = (value: unknown) => {

@@ -4,15 +4,11 @@ import type { Node } from '@xyflow/react';
 import {NODE_TYPES, type BackgroundNodeData, type ImageNodeData, type MaskNodeData, type NodeMetadata, type PageNodeData, type TextNodeData} from '../types/nodeTypes';
 import {useCallback, useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
 import {toNumberOrNull} from '../utils/numberUtils.ts';
-import {
-  DEFAULT_LATEST_SELECTED_PAGE_NAME,
-  getLatestSelectedPageNameFromSession,
-  LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT,
-} from '../utils/sessionStorage.ts';
 import {ensureProjectFontsLoaded, PROJECT_FONT_OPTIONS} from '../utils/fontRegistry.ts';
 
 type P5BackgroundProps = {
   nodes: Node[];
+  selectedPageNode?: Node;
   onAutoTextDimensions?: (nodeId: string, dimensions: {width: number; height: number}) => void;
 };
 
@@ -38,7 +34,7 @@ type ProgressiveRenderState = {
   taskIndex: number;
 };
 
-const P5Preview = ({ nodes, onAutoTextDimensions }: P5BackgroundProps) => {
+const P5Preview = ({ nodes, selectedPageNode, onAutoTextDimensions }: P5BackgroundProps) => {
   const p5InstanceRef = useRef<p5 | null>(null);
   const imageMetadataListRef = useRef<ImageMetadataWithImage[]>([]);
   const backgroundMetadataListRef = useRef<BackgroundMetadataWithImage[]>([]);
@@ -65,31 +61,10 @@ const P5Preview = ({ nodes, onAutoTextDimensions }: P5BackgroundProps) => {
     height: number;
   } | null>(null);
   const tilePatternCanvasCacheRef = useRef<WeakMap<HTMLCanvasElement, Map<string, HTMLCanvasElement>>>(new WeakMap());
-  const [latestSelectedPageName, setLatestSelectedPageName] = useState(() => getLatestSelectedPageNameFromSession());
   const [isPreviewLoading, setIsPreviewLoading] = useState(true);
   const [fontsReady, setFontsReady] = useState(PROJECT_FONT_OPTIONS.length === 0);
   const [isP5Ready, setIsP5Ready] = useState(false);
 
-  const selectedPageNode = useMemo(() => {
-    const pageNodes = nodes.filter(node => node.type === NODE_TYPES.PAGE);
-    if (pageNodes.length === 0) {
-      return undefined;
-    }
-
-    const selectedName = latestSelectedPageName.trim();
-    if (selectedName && selectedName !== DEFAULT_LATEST_SELECTED_PAGE_NAME) {
-      const matchingPageNode = pageNodes.find((node) => {
-        const pageData = node.data as PageNodeData | undefined;
-        return (pageData?.name ?? '').trim() === selectedName;
-      });
-
-      if (matchingPageNode) {
-        return matchingPageNode;
-      }
-    }
-
-    return pageNodes[0];
-  }, [latestSelectedPageName, nodes]);
   const pageNodeData = selectedPageNode?.data as PageNodeData | undefined;
   const selectedPageNodeId = selectedPageNode?.id ?? null;
   const maskMetadataList = useMemo(() => pageNodeData?.metadata?.sourceNodes.filter(
@@ -141,31 +116,6 @@ const P5Preview = ({ nodes, onAutoTextDimensions }: P5BackgroundProps) => {
     }
     isPreviewLoadingRef.current = nextValue;
     setIsPreviewLoading(nextValue);
-  }, []);
-
-  useEffect(() => {
-    const syncLatestSelectedPageName = () => {
-      setLatestSelectedPageName(getLatestSelectedPageNameFromSession());
-    };
-
-    const onLatestSelectedPageNameChanged = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
-      const pageName = customEvent.detail;
-
-      if (typeof pageName === 'string' && pageName.trim()) {
-        setLatestSelectedPageName(pageName);
-        return;
-      }
-
-      syncLatestSelectedPageName();
-    };
-
-    window.addEventListener(LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT, onLatestSelectedPageNameChanged);
-    window.addEventListener('storage', syncLatestSelectedPageName);
-    return () => {
-      window.removeEventListener(LATEST_SELECTED_PAGE_NAME_CHANGED_EVENT, onLatestSelectedPageNameChanged);
-      window.removeEventListener('storage', syncLatestSelectedPageName);
-    };
   }, []);
 
   const loadCursorImage = (p5Instance: p5, mousePointer: string | null) => {
