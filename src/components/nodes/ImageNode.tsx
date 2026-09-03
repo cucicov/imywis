@@ -52,6 +52,26 @@ const numberInputStyle: CSSProperties = {
     color: 'black',
 };
 
+const compactNumberInputStyle: CSSProperties = {
+    fontSize: '11px',
+    width: '52px',
+    border: 0,
+    background: '#fff',
+    opacity: 0.7,
+    color: 'black',
+};
+
+const randomizeButtonStyle: CSSProperties = {
+    fontSize: '10px',
+    padding: '2px 6px',
+    border: '1px solid rgba(0,0,0,0.4)',
+    background: 'rgba(255,255,255,0.6)',
+    color: '#4f1d05',
+    cursor: 'pointer',
+    borderRadius: '6px',
+    lineHeight: '14px',
+};
+
 const MAX_LOCAL_IMAGE_BYTES = 2 * 1024 * 1024;
 const ALLOWED_IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.gif']);
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif']);
@@ -75,6 +95,12 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
     const scaleNumericValue = toFiniteNumber(data.scale, 1);
     const positionXNumericValue = toFiniteNumber(data.positionX, 0);
     const positionYNumericValue = toFiniteNumber(data.positionY, 0);
+    const positionXRandomStartNumericValue = toFiniteNumber(data.positionXRandomStart, 0);
+    const positionXRandomEndNumericValue = toFiniteNumber(data.positionXRandomEnd, 300);
+    const positionXRandomStepNumericValue = toFiniteNumber(data.positionXRandomStep, 1);
+    const positionYRandomStartNumericValue = toFiniteNumber(data.positionYRandomStart, 0);
+    const positionYRandomEndNumericValue = toFiniteNumber(data.positionYRandomEnd, 300);
+    const positionYRandomStepNumericValue = toFiniteNumber(data.positionYRandomStep, 1);
 
     const applyNodeFieldUpdates = useCallback((updates: Array<{field: string; value: unknown}>) => {
         const edges = getEdges();
@@ -276,6 +302,29 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
         const edges = getEdges();
         setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, Math.round(nextValue)));
     }, [getEdges, id, onScaleChange, setNodes]);
+
+    const randomizePosition = useCallback((axis: 'positionX' | 'positionY') => {
+        const start = axis === 'positionX' ? positionXRandomStartNumericValue : positionYRandomStartNumericValue;
+        const rawEnd = axis === 'positionX' ? positionXRandomEndNumericValue : positionYRandomEndNumericValue;
+        const rawStep = axis === 'positionX' ? positionXRandomStepNumericValue : positionYRandomStepNumericValue;
+        const end = Number.isFinite(rawEnd) ? Math.max(start, rawEnd) : start;
+
+        const normalizedStep = Number.isFinite(rawStep) ? Math.abs(rawStep) : 1;
+        const step = normalizedStep > 0 ? normalizedStep : 1;
+        const maxSteps = step > 0 ? Math.floor((end - start) / step) : 0;
+        const stepIndex = maxSteps > 0 ? Math.floor(Math.random() * (maxSteps + 1)) : 0;
+        const randomizedValue = Math.min(end, start + stepIndex * step);
+
+        applyNodeFieldUpdates([{ field: axis, value: randomizedValue }]);
+    }, [
+        applyNodeFieldUpdates,
+        positionXRandomEndNumericValue,
+        positionXRandomStartNumericValue,
+        positionXRandomStepNumericValue,
+        positionYRandomEndNumericValue,
+        positionYRandomStartNumericValue,
+        positionYRandomStepNumericValue,
+    ]);
 
     const onToggleFields = useCallback(() => {
         setNodes((nds) => nds.map((node) => (
@@ -560,39 +609,69 @@ const ImageNode = ({ id, data }: NodeProps<Node<ImageNodeData, typeof NODE_TYPES
                         <div style={rowStyle}>
                             <label style={rowLabelStyle}>position-x:</label>
                             <div style={controlStackStyle}>
-                                <input
-                                    id="field-positionX"
-                                    className="nodrag"
-                                    type="number"
-                                    value={data.positionX ?? ''}
-                                    onChange={onTextChange}
-                                    style={textInputStyle}
-                                />
+                                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                    <input
+                                        id="field-positionX"
+                                        className="nodrag"
+                                        type="number"
+                                        value={data.positionX ?? ''}
+                                        onChange={onTextChange}
+                                        style={compactNumberInputStyle}
+                                    />
+                                </div>
                                 <CumulativeCenterSlider
                                     showValuePreview={false}
                                     className="nodrag nopan nowheel"
                                     cumulativeValue={positionXNumericValue}
                                     onCumulativeChange={(nextValue) => onNumericSliderChange('positionX', nextValue)}
                                 />
+                                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                    <label style={labelStyle}>start</label>
+                                    <input id="field-positionXRandomStart" className="nodrag" type="number" value={data.positionXRandomStart ?? 0} onChange={onTextChange} style={compactNumberInputStyle} />
+                                    <label style={labelStyle}>end</label>
+                                    <input id="field-positionXRandomEnd" className="nodrag" type="number" value={data.positionXRandomEnd ?? 300} onChange={onTextChange} style={compactNumberInputStyle} />
+                                </div>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                    <label style={labelStyle}>step</label>
+                                    <input id="field-positionXRandomStep" className="nodrag" type="number" value={data.positionXRandomStep ?? 1} onChange={onTextChange} style={compactNumberInputStyle} />
+                                    <button type="button" className="nodrag" onClick={() => randomizePosition('positionX')} style={randomizeButtonStyle}>
+                                        randomize
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div style={rowStyle}>
                             <label style={rowLabelStyle}>position-y:</label>
                             <div style={controlStackStyle}>
-                                <input
-                                    id="field-positionY"
-                                    className="nodrag"
-                                    type="number"
-                                    value={data.positionY ?? ''}
-                                    onChange={onTextChange}
-                                    style={textInputStyle}
-                                />
+                                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                    <input
+                                        id="field-positionY"
+                                        className="nodrag"
+                                        type="number"
+                                        value={data.positionY ?? ''}
+                                        onChange={onTextChange}
+                                        style={compactNumberInputStyle}
+                                    />
+                                </div>
                                 <CumulativeCenterSlider
                                     showValuePreview={false}
                                     className="nodrag nopan nowheel"
                                     cumulativeValue={positionYNumericValue}
                                     onCumulativeChange={(nextValue) => onNumericSliderChange('positionY', nextValue)}
                                 />
+                                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                    <label style={labelStyle}>start</label>
+                                    <input id="field-positionYRandomStart" className="nodrag" type="number" value={data.positionYRandomStart ?? 0} onChange={onTextChange} style={compactNumberInputStyle} />
+                                    <label style={labelStyle}>end</label>
+                                    <input id="field-positionYRandomEnd" className="nodrag" type="number" value={data.positionYRandomEnd ?? 300} onChange={onTextChange} style={compactNumberInputStyle} />
+                                </div>
+                                <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                                    <label style={labelStyle}>step</label>
+                                    <input id="field-positionYRandomStep" className="nodrag" type="number" value={data.positionYRandomStep ?? 1} onChange={onTextChange} style={compactNumberInputStyle} />
+                                    <button type="button" className="nodrag" onClick={() => randomizePosition('positionY')} style={randomizeButtonStyle}>
+                                        randomize
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div style={rowStyle}>

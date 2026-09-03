@@ -48,6 +48,12 @@ export type ImageNodeData = BaseNodeData & {
     autoHeight?: boolean;
     positionX?: number;
     positionY?: number;
+    positionXRandomStart?: number;
+    positionXRandomEnd?: number;
+    positionXRandomStep?: number;
+    positionYRandomStart?: number;
+    positionYRandomEnd?: number;
+    positionYRandomStep?: number;
     opacity?: number;
     metadata?: NodeMetadata;
 };

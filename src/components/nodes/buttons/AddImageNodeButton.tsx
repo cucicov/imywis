@@ -16,6 +16,12 @@ const AddPageNodeButton = () => {
             autoHeight: false,
             positionX: 0,
             positionY: 0,
+            positionXRandomStart: 0,
+            positionXRandomEnd: 300,
+            positionXRandomStep: 1,
+            positionYRandomStart: 0,
+            positionYRandomEnd: 300,
+            positionYRandomStep: 1,
             opacity: 1
         };
         const { width, height, transform } = store.getState();
