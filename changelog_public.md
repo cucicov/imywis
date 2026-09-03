@@ -9,6 +9,27 @@ This changelog tracks public releases and delivered changes.
 - `PATCH`: backward-compatible fixes
 
 ---
+## [1.4.2] - 2026-09-03
+### Summary
+- Added configurable user handles, full-size preview scrolling, and Image Node position randomization.
+
+### Added
+- Users can view and update their public webpage handle from the Settings menu.
+- Image Node position-x and position-y controls now support start, end, step, and randomize values.
+
+### Changed
+- User handle updates check for an existing handle and report success or conflicts through the status popup.
+
+### Fixed
+- Preview pages larger than the browser viewport can now be reached using horizontal and vertical scrollbars.
+
+### Removed
+
+### Security
+
+### Notes
+
+---
 ## [1.4.1] - 2026-08-27
 ### Summary
 - EventNode can open multiple PageNodes: one primary redirect plus multiple pop-up pages.
