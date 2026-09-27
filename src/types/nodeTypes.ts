@@ -1,6 +1,7 @@
 export const NODE_TYPES = {
     PAGE: 'pageNode',
     IMAGE: 'imageNode',
+    SOUND: 'soundNode',
     BACKGROUND: 'backgroundNode',
     TEXT: 'textNode',
     EVENT: 'eventNode',
@@ -55,6 +56,15 @@ export type ImageNodeData = BaseNodeData & {
     positionYRandomEnd?: number;
     positionYRandomStep?: number;
     opacity?: number;
+    metadata?: NodeMetadata;
+};
+
+export type SoundNodeData = BaseNodeData & {
+    path?: string;
+    localSoundDataUrl?: string;
+    localSoundFileName?: string;
+    autoplay?: boolean;
+    loop?: boolean;
     metadata?: NodeMetadata;
 };
 

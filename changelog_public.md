@@ -9,6 +9,31 @@ This changelog tracks public releases and delivered changes.
 - `PATCH`: backward-compatible fixes
 
 ---
+## [Unreleased]
+### Summary
+- Added SoundNode audio playback and event-triggered sound support.
+
+### Added
+- New SoundNode with audio path, autoplay, and loop fields.
+- MP3, WAV, and OGG uploads with a 2 MB file-size limit.
+- SoundNode connections to PageNodes and EventNodes.
+- Multiple sounds can be triggered by the same event; starting a new sound group stops currently playing sounds.
+
+### Changed
+- Sound-only event targets are now clickable even when they do not navigate to another page.
+- Pages show a prominent sound-unlock overlay when browser autoplay restrictions require user interaction.
+
+### Fixed
+- Event-triggered sounds no longer attempt navigation to a null URL.
+
+### Removed
+
+### Security
+
+### Notes
+- Audible autoplay remains subject to browser policies. Users may need to activate the sound-unlock control before page sounds can play.
+
+---
 ## [1.4.2] - 2026-09-03
 ### Summary
 - Added configurable user handles, full-size preview scrolling, and Image Node position randomization.

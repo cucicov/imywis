@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '@xyflow/react/dist/style.css';
 import PageNode from './nodes/PageNode.tsx';
 import ImageNode from "./nodes/ImageNode.tsx";
+import SoundNode from './nodes/SoundNode.tsx';
 import type {PageNodeData} from "../types/nodeTypes.ts";
 import {syncNodesFromEdges, updateNodeDataAndPropagate} from "../utils/nodeUtils.ts";
 import {NODE_TYPES} from '../types/nodeTypes';
@@ -34,6 +35,7 @@ import {
 } from '../utils/sessionStorage.ts';
 import {supabase} from '../utils/supabaseClient.ts';
 import {getLocalImageDataUrl} from '../utils/localImageCache.ts';
+import {getLocalSoundDataUrl} from '../utils/localSoundCache.ts';
 import ChangeLogPopUp from './ChangeLogPopUp.tsx';
 import AddNodesDropdown from './AddNodesDropdown.tsx';
 import StatusPopup, {type StatusPopupType} from './StatusPopup.tsx';
@@ -41,6 +43,7 @@ import StatusPopup, {type StatusPopupType} from './StatusPopup.tsx';
 const nodeTypes = {
   pageNode: PageNode,
   imageNode: ImageNode,
+  soundNode: SoundNode,
   backgroundNode: BackgroundNode,
   textNode: TextNode,
   eventNode: EventNode,
@@ -482,6 +485,12 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
       return false;
     }
 
+    const sourceNode = nodes.find(node => node.id === normalizedConnection.source);
+    const isSoundEventConnection = sourceNode?.type === NODE_TYPES.SOUND
+      && targetNode?.type === NODE_TYPES.EVENT
+      && sourceHandle === 'orange-output'
+      && targetHandle === 'orange-input';
+
     if (normalizedConnection.sourceHandle === 'red-output'
       && normalizedConnection.targetHandle === 'red-input'
       && nodes.find(node => node.id === normalizedConnection.source)?.type === NODE_TYPES.PAGE
@@ -504,7 +513,7 @@ const FlowCanvas = ({ session, handleLogout }: AppUIProps) => {
     }
 
     const rules = CONNECTION_RULES[targetType || ''];
-    if (!rules?.allowMultiple) {
+    if (!rules?.allowMultiple && !isSoundEventConnection) {
       const existingConnection = edges.find(
         (edge) => edge.target === normalizedConnection.target && edge.targetHandle === targetHandle
       );
@@ -1106,6 +1115,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 const hydrateNodesWithLocalImageCache = async (nodes: Node[]): Promise<Node[]> => {
   const dataUrlByPathCache = new Map<string, string | null>();
+  const soundDataUrlByPathCache = new Map<string, string | null>();
 
   const resolveCachedDataUrl = async (path: string) => {
     const normalizedPath = path.trim();
@@ -1119,6 +1129,15 @@ const hydrateNodesWithLocalImageCache = async (nodes: Node[]): Promise<Node[]> =
 
     const cachedDataUrl = await getLocalImageDataUrl(normalizedPath);
     dataUrlByPathCache.set(normalizedPath, cachedDataUrl);
+    return cachedDataUrl;
+  };
+
+  const resolveCachedSoundDataUrl = async (path: string) => {
+    const normalizedPath = path.trim();
+    if (!normalizedPath.startsWith('local:')) return null;
+    if (soundDataUrlByPathCache.has(normalizedPath)) return soundDataUrlByPathCache.get(normalizedPath) ?? null;
+    const cachedDataUrl = await getLocalSoundDataUrl(normalizedPath);
+    soundDataUrlByPathCache.set(normalizedPath, cachedDataUrl);
     return cachedDataUrl;
   };
 
@@ -1139,6 +1158,9 @@ const hydrateNodesWithLocalImageCache = async (nodes: Node[]): Promise<Node[]> =
     const localImageDataUrlValue = typeof record.localImageDataUrl === 'string'
       ? record.localImageDataUrl.trim()
       : '';
+    const localSoundDataUrlValue = typeof record.localSoundDataUrl === 'string'
+      ? record.localSoundDataUrl.trim()
+      : '';
 
     const keys = Object.keys(record);
     for (const key of keys) {
@@ -1150,6 +1172,11 @@ const hydrateNodesWithLocalImageCache = async (nodes: Node[]): Promise<Node[]> =
       if (cachedDataUrl) {
         output.localImageDataUrl = cachedDataUrl;
       }
+    }
+
+    if (!localSoundDataUrlValue && pathValue.trim().startsWith('local:')) {
+      const cachedDataUrl = await resolveCachedSoundDataUrl(pathValue);
+      if (cachedDataUrl) output.localSoundDataUrl = cachedDataUrl;
     }
 
     return output;

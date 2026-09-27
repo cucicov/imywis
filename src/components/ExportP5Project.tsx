@@ -1,6 +1,6 @@
 import {useState, type CSSProperties} from 'react';
 import type {Edge, Node} from '@xyflow/react';
-import {NODE_TYPES, type ImageNodeData, type PageNodeData} from '../types/nodeTypes';
+import {NODE_TYPES, type ImageNodeData, type PageNodeData, type SoundNodeData} from '../types/nodeTypes';
 import {APP_CONFIG} from '../config/appConfig';
 import type {Session} from "@supabase/supabase-js";
 import {supabase} from "../utils/supabaseClient.ts";
@@ -60,6 +60,7 @@ const statusWrapperStyle: CSSProperties = {
 };
 
 const MAX_LOCAL_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_LOCAL_SOUND_BYTES = 2 * 1024 * 1024;
 
 const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5ProjectProps) => {
     const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +123,13 @@ const ExportP5Project = ({nodes, edges, session, onSavedAtChange}: ExportP5Proje
                 const names = oversizedLocalImages.slice(0, 3).map(item => item.fileName).join(', ');
                 const suffix = oversizedLocalImages.length > 3 ? '...' : '';
                 setStatusMessage(`Publish blocked: local image exceeds 2 MB (${names}${suffix}).`);
+                setStatusType('error');
+                return;
+            }
+            const oversizedLocalSounds = getOversizedLocalSounds(nodes, MAX_LOCAL_SOUND_BYTES);
+            if (oversizedLocalSounds.length > 0) {
+                const names = oversizedLocalSounds.slice(0, 3).map(item => item.fileName).join(', ');
+                setStatusMessage(`Publish blocked: local sound exceeds 2 MB (${names}${oversizedLocalSounds.length > 3 ? '...' : ''}).`);
                 setStatusType('error');
                 return;
             }
@@ -262,5 +270,14 @@ const getDataUrlByteLength = (dataUrl: string) => {
     const padding = trimmed.endsWith('==') ? 2 : trimmed.endsWith('=') ? 1 : 0;
     return Math.floor((trimmed.length * 3) / 4) - padding;
 };
+
+const getOversizedLocalSounds = (nodes: Node[], maxBytes: number) => nodes.flatMap(node => {
+    if (node.type !== NODE_TYPES.SOUND) return [];
+    const data = node.data as SoundNodeData;
+    if (typeof data.localSoundDataUrl !== 'string' || !data.localSoundDataUrl.startsWith('data:audio/')) return [];
+    return getDataUrlByteLength(data.localSoundDataUrl) > maxBytes
+        ? [{fileName: data.localSoundFileName ?? data.path ?? `sound-node-${node.id}`}]
+        : [];
+});
 
 export default ExportP5Project;

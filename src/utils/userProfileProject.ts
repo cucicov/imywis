@@ -1,6 +1,7 @@
 import type {Edge, Node} from '@xyflow/react';
 import {supabase} from './supabaseClient.ts';
 import {uploadBase64ImageToStorage} from './imageUpload.ts';
+import {uploadBase64SoundToStorage} from './soundUpload.ts';
 
 export type ExportedNodesJson = {
   nodes: Node[];
@@ -57,11 +58,11 @@ const uploadAllBase64ImagesAndReplaceWithUrls = async (
             data: Record<string, unknown>;
           }) => {
             // Upload image if it has localImageDataUrl (Base64 encoded image)
-            if (
+          if (
               sourceNode.data.localImageDataUrl &&
               typeof sourceNode.data.localImageDataUrl === 'string' &&
               sourceNode.data.localImageDataUrl.startsWith('data:image/')
-            ) {
+          ) {
               try {
                 const fileName = (sourceNode.data.localImageFileName as string) || `image-${sourceNode.nodeId}`;
                 const {publicUrl} = await uploadBase64ImageToStorage(
@@ -85,7 +86,20 @@ const uploadAllBase64ImagesAndReplaceWithUrls = async (
                 console.error(`❌ Failed to upload image for node ${sourceNode.nodeId}:`, error);
                 // Keep original data on error (fallback to Base64)
                 return sourceNode;
-              }
+          }
+
+          const localSoundDataUrl = typeof sourceNode.data.localSoundDataUrl === 'string'
+            ? sourceNode.data.localSoundDataUrl as string
+            : '';
+          if (localSoundDataUrl.startsWith('data:audio/')) {
+            try {
+              const fileName = (sourceNode.data.localSoundFileName as string) || `sound-${sourceNode.nodeId}`;
+              const {publicUrl} = await uploadBase64SoundToStorage(localSoundDataUrl, userId, fileName);
+              return {...sourceNode, data: {...sourceNode.data, path: publicUrl, localSoundDataUrl: undefined}};
+            } catch (error) {
+              console.error(`❌ Failed to upload sound for node ${sourceNode.nodeId}:`, error);
+            }
+          }
             }
 
             return sourceNode;
@@ -114,6 +128,17 @@ const uploadAllBase64ImagesAndReplaceWithUrls = async (
         } catch (error) {
           console.error(`❌ Failed to upload image for node ${clonedNode.id}:`, error);
           // Keep original data on error
+        }
+      }
+
+      if (clonedNode.data?.localSoundDataUrl && typeof clonedNode.data.localSoundDataUrl === 'string' && clonedNode.data.localSoundDataUrl.startsWith('data:audio/')) {
+        try {
+          const fileName = (clonedNode.data.localSoundFileName as string) || `sound-${clonedNode.id}`;
+          const {publicUrl} = await uploadBase64SoundToStorage(clonedNode.data.localSoundDataUrl, userId, fileName);
+          clonedNode.data.path = publicUrl;
+          clonedNode.data.localSoundDataUrl = undefined;
+        } catch (error) {
+          console.error(`❌ Failed to upload sound for node ${clonedNode.id}:`, error);
         }
       }
 

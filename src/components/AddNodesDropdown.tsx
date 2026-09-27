@@ -5,6 +5,7 @@ import AddTextNodeButton from './nodes/buttons/AddTextNodeButton.tsx';
 import AddEventNodeButton from './nodes/buttons/AddEventNodeButton.tsx';
 import AddExternalLinkNodeButton from './nodes/buttons/AddExternalLinkNodeButton.tsx';
 import AddMaskNodeButton from './nodes/buttons/AddMaskNodeButton.tsx';
+import AddSoundNodeButton from './nodes/buttons/AddSoundNodeButton.tsx';
 
 type AddNodesDropdownProps = {
   isOpen: boolean;
@@ -47,6 +48,7 @@ const AddNodesDropdown = ({ isOpen }: AddNodesDropdownProps) => {
       `}</style>
       <AddPageNodeButton />
       <AddImageNodeButton />
+      <AddSoundNodeButton />
       <AddBackgroundNodeButton />
       <AddTextNodeButton />
       <AddEventNodeButton />
