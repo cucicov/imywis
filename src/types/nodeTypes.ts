@@ -105,6 +105,7 @@ export type EventType = 'click' | 'mouse over';
 
 export type EventNodeData = BaseNodeData & {
     type?: EventType;
+    delay?: number;
     metadata?: NodeMetadata;
 };
 

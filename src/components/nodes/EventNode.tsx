@@ -39,12 +39,15 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
     const [metadataExpanded, setMetadataExpanded] = useState(APP_CONFIG.metadataExpandedByDefault);
     const fieldsExpanded = data.collapsed !== true;
 
-    const onFieldChange = useCallback((evt: ChangeEvent<HTMLSelectElement>) => {
+    const onFieldChange = useCallback((evt: ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
         const {id: targetId, value} = evt.target;
         const field = targetId.replace('field-', '');
+        const nextValue = field === 'delay'
+            ? Math.min(10, Math.max(0, Number.parseFloat(value) || 0))
+            : value;
 
         const edges = getEdges();
-        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, value));
+        setNodes((nds) => updateNodeAndPropagate(nds, edges, id, field, nextValue));
     }, [getEdges, id, setNodes]);
 
     const onToggleFields = useCallback(() => {
@@ -140,6 +143,21 @@ const EventNode = ({id, data}: NodeProps<Node<EventNodeData, typeof NODE_TYPES.E
                                 <option value="click">click</option>
                                 {/*<option value="mouse over">mouse over</option>*/}
                             </select>
+                        </div>
+                        <div style={rowStyle}>
+                            <label htmlFor="field-delay" style={rowLabelStyle}>delay:</label>
+                            <input
+                                id="field-delay"
+                                className="nodrag"
+                                type="number"
+                                min="0"
+                                max="10"
+                                step="0.1"
+                                value={data.delay ?? 0}
+                                onChange={onFieldChange}
+                                style={inputStyle}
+                                aria-label="Redirect delay in seconds"
+                            />
                         </div>
                     </div>
 

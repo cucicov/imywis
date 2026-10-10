@@ -9,6 +9,7 @@ const AddEventNodeButton = () => {
         const data: EventNodeData = {
             label: NODE_TYPES.EVENT,
             type: 'click',
+            delay: 0,
         };
 
         const currentNodes = getNodes();
